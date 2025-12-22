@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import traceback
 
 import yt_dlp
 import requests
@@ -167,7 +168,8 @@ def refresh_session_selenium():
         print("Selenium not installed. Install with: pip install selenium", file=sys.stderr)
         return None
     except Exception as e:
-        print(f"Error refreshing Instagram session: {e}", file=sys.stderr)
+        print("Error refreshing Instagram session:", file=sys.stderr)
+        traceback.print_exc()
         return None
 
 
