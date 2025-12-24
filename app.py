@@ -27,8 +27,17 @@ CORS(app)
 INSTAGRAM_USERNAME = os.getenv("INSTAGRAM_USERNAME", "creatorjoy9")
 INSTAGRAM_PASSWORD = os.getenv("INSTAGRAM_PASSWORD", "Allahisgreat@1234567")
 
-# On Render, you probably want this on a persistent disk, e.g. "/data/session_data.json"
-SESSION_FILE = Path(os.getenv("INSTAGRAM_SESSION_FILE", "session_data.json"))
+# On Render, prefer a persistent disk (e.g. /data). Fallback to local file when not on Render.
+SESSION_FILE = Path(
+    os.getenv(
+        "INSTAGRAM_SESSION_FILE",
+        "/data/session_data.json" if os.getenv("RENDER") else "session_data.json",
+    )
+)
+
+# Selenium Remote WebDriver URL (Selenium standalone Chrome running elsewhere)
+# Example: http://<vps-ip>:4444/wd/hub
+SELENIUM_REMOTE_URL = os.getenv("SELENIUM_REMOTE_URL")
 
 session_data = {
     "cookie": None,
@@ -46,16 +55,18 @@ def load_session():
                 data = json.load(f)
                 session_data["cookie"] = data.get("cookie")
                 session_data["expires_at"] = data.get("expires_at")
-                print("Loaded Instagram session from file")
-        except Exception:
-            pass
+                print(f"Loaded Instagram session from file: {SESSION_FILE}")
+        except Exception as e:
+            print(f"Failed to load session file: {e}", file=sys.stderr)
 
 
 def save_session():
     """Save session to file"""
     try:
+        SESSION_FILE.parent.mkdir(parents=True, exist_ok=True)
         with open(SESSION_FILE, "w") as f:
             json.dump(session_data, f)
+        print(f"Saved Instagram session to file: {SESSION_FILE}")
     except Exception as e:
         print(f"Failed to save session file: {e}", file=sys.stderr)
 
@@ -81,7 +92,11 @@ def is_session_valid():
 
 
 def refresh_session_selenium():
-    """Refresh session using Selenium (full browser automation)"""
+    """
+    Refresh session using Selenium.
+    Uses Remote WebDriver (SELENIUM_REMOTE_URL) so that
+    Chrome runs in a separate Selenium container/host.
+    """
     try:
         from selenium import webdriver
         from selenium.webdriver.common.by import By
@@ -89,10 +104,17 @@ def refresh_session_selenium():
         from selenium.webdriver.support import expected_conditions as EC
         from selenium.webdriver.chrome.options import Options
 
-        print("Refreshing Instagram session via Selenium...")
+        if not SELENIUM_REMOTE_URL:
+            print(
+                "SELENIUM_REMOTE_URL not set; cannot refresh Instagram session",
+                file=sys.stderr,
+            )
+            return None
+
+        print(f"Refreshing Instagram session via Selenium Remote at {SELENIUM_REMOTE_URL}...")
 
         chrome_options = Options()
-        chrome_options.add_argument("--headless")
+        # Headless usually controlled on Selenium host; these flags still help stability.
         chrome_options.add_argument("--no-sandbox")
         chrome_options.add_argument("--disable-dev-shm-usage")
         chrome_options.add_argument("--disable-gpu")
@@ -103,7 +125,11 @@ def refresh_session_selenium():
             "Chrome/120.0.0.0 Safari/537.36"
         )
 
-        driver = webdriver.Chrome(options=chrome_options)
+        # Remote WebDriver instead of local Chrome
+        driver = webdriver.Remote(
+            command_executor=SELENIUM_REMOTE_URL,
+            options=chrome_options,
+        )
 
         try:
             driver.get("https://www.instagram.com/accounts/login/")
@@ -449,11 +475,16 @@ def fill_missing_metadata(video_list, max_workers=5, days=None):
     For each video in video_list, fetch full metadata to fill upload_date,
     thumbnail_url, description, view_count, etc. Apply date cutoff if days is set.
     """
+    cookies_path = os.getenv("YTDLP_COOKIES_FILE")  # e.g. "/app/youtube_cookies.txt"
+
     ydl_opts = {
         "quiet": True,
         "no_warnings": True,
         "skip_download": True,
     }
+
+    if cookies_path:
+        ydl_opts["cookies"] = cookies_path
 
     cutoff_dt = None
     if days is not None:
@@ -568,10 +599,10 @@ def instagram_refresh_session_endpoint():
     if cookie:
         return jsonify({"success": True, "message": "Session refreshed successfully"})
     else:
-        return (
-            jsonify({"success": False, "error": "Failed to refresh session"}),
-            500,
-        )
+        msg = "Failed to refresh session"
+        if not SELENIUM_REMOTE_URL:
+            msg += " (SELENIUM_REMOTE_URL not configured)"
+        return jsonify({"success": False, "error": msg}), 500
 
 
 @app.route("/instagram/scrape", methods=["POST"])
