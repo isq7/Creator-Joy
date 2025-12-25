@@ -80,7 +80,10 @@ def save_session():
 
 
 def is_session_valid():
-    """Check if current session is still valid"""
+    # 🔁 lazy load if memory empty but file exists
+    if not session_data["cookie"] and SESSION_FILE.exists():
+        load_session()
+
     if not session_data["cookie"]:
         return False
 
