@@ -69,6 +69,7 @@ def load_session():
         print("[SESSION] Failed to load session file:", e)
 
 
+
 def save_session():
     """Save session to file"""
     try:
