@@ -46,25 +46,27 @@ session_data = {
 def load_session():
     global session_data
 
-    print(f"[SESSION] Looking for session file at: {SESSION_FILE}")
+    print(f"[SESSION] PATH = {SESSION_FILE}")
 
     if not SESSION_FILE.exists():
-        print("[SESSION] session_data.json NOT FOUND")
+        print("[SESSION] FILE NOT FOUND")
         return
 
     try:
         with open(SESSION_FILE, "r") as f:
-            data = json.load(f)
+            raw = f.read()
+            print("[SESSION] RAW FILE CONTENTS:", raw)
+            data = json.loads(raw)
 
         session_data["cookie"] = data.get("cookie")
         session_data["expires_at"] = data.get("expires_at")
 
-        print("[SESSION] session_data.json loaded successfully")
-        print("[SESSION] cookies:", list(session_data["cookie"].keys()) if session_data["cookie"] else None)
-        print("[SESSION] expires_at:", session_data["expires_at"])
+        print("[SESSION] LOADED cookie:", bool(session_data["cookie"]))
+        print("[SESSION] LOADED expires_at:", session_data["expires_at"])
 
     except Exception as e:
-        print("[SESSION] Failed to load session file:", e)
+        print("[SESSION] LOAD FAILED:", e)
+
 
 load_session()
 
