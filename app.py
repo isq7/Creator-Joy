@@ -793,6 +793,15 @@ def youtube_scrape_batch():
 
     return jsonify(results), 200
 
+@app.route("/_debug/session-file", methods=["GET"])
+def debug_session_file():
+    return jsonify({
+        "exists": SESSION_FILE.exists(),
+        "path": str(SESSION_FILE),
+        "cwd": os.getcwd()
+    }), 200
+
+
 
 # --------------------------------------------------------------------------------------
 # Local dev entrypoint
