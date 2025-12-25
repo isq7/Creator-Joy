@@ -554,13 +554,15 @@ def root_health():
 
 @app.route("/instagram/health", methods=["GET"])
 def instagram_health():
-    return jsonify(
-        {
-            "status": "ok",
-            "service": "instagram-scraper",
-            "session_valid": is_session_valid(),
-        }
-    ), 200
+    return jsonify({
+        "status": "ok",
+        "service": "instagram-scraper",
+        "session_valid": is_session_valid(),
+        "expires_at": session_data.get("expires_at"),
+        "now": datetime.now().isoformat(),
+        "has_cookie": bool(session_data.get("cookie")),
+    }), 200
+
 
 
 @app.route("/youtube/health", methods=["GET"])
