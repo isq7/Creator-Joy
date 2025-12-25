@@ -133,17 +133,59 @@ def refresh_session_selenium():
 
         try:
             driver.get("https://www.instagram.com/accounts/login/")
-            time.sleep(3)
+            time.sleep(5)
 
-            username_field = WebDriverWait(driver, 10).until(
-                EC.presence_of_element_located((By.NAME, "username"))
-            )
+            # Try to accept cookies / allow all if banner appears
+            try:
+                cookies_button = WebDriverWait(driver, 5).until(
+                    EC.element_to_be_clickable(
+                        (
+                            By.XPATH,
+                            "//button[contains(text(),'Allow all') or "
+                            "contains(text(),'Accept all') or "
+                            "contains(text(),'Accept All') or "
+                            "contains(text(),'Accept')]",
+                        )
+                    )
+                )
+                cookies_button.click()
+                print("Clicked cookies/accept button on Instagram")
+                time.sleep(2)
+            except Exception:
+                print("No cookies/accept banner detected")
+
+            # Now wait a bit longer for the login fields
+            try:
+                username_field = WebDriverWait(driver, 20).until(
+                    EC.presence_of_element_located((By.NAME, "username"))
+                )
+            except Exception:
+                # Fallback: look for input[type='text'] if name is different
+                try:
+                    username_field = WebDriverWait(driver, 5).until(
+                        EC.presence_of_element_located(
+                            (
+                                By.CSS_SELECTOR,
+                                "input[name='username'], input[type='text']",
+                            )
+                        )
+                    )
+                except Exception:
+                    print(
+                        "Could not find username field on Instagram login page",
+                        file=sys.stderr,
+                    )
+                    traceback.print_exc()
+                    return None
+
             password_field = driver.find_element(By.NAME, "password")
 
             username_field.send_keys(INSTAGRAM_USERNAME)
             password_field.send_keys(INSTAGRAM_PASSWORD)
 
-            login_button = driver.find_element(By.CSS_SELECTOR, "button[type='submit']")
+            login_button = driver.find_element(
+                By.CSS_SELECTOR, "button[type='submit']"
+            )
             login_button.click()
 
             time.sleep(5)
@@ -806,3 +848,4 @@ if __name__ == "__main__":
     # Load existing Instagram session on startup (local dev)
     load_session()
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", 5000)), debug=False)
+    
