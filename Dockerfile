@@ -25,4 +25,4 @@ RUN mkdir -p /data
 EXPOSE 8000
 
 # Run Flask app via Gunicorn
-CMD ["gunicorn", "-b", "0.0.0.0:8000", "app:app"]
+CMD ["gunicorn", "app:app", "--bind", "0.0.0.0:8000", "--workers", "2", "--timeout", "180"]
