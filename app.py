@@ -133,65 +133,77 @@ def refresh_session_selenium():
 
         try:
             driver.get("https://www.instagram.com/accounts/login/")
-            time.sleep(5)
+            # give time for page + JS over remote connection
+            time.sleep(10)
 
             # Try to accept cookies / allow all if banner appears
             try:
-                cookies_button = WebDriverWait(driver, 5).until(
+                cookies_button = WebDriverWait(driver, 15).until(
                     EC.element_to_be_clickable(
                         (
                             By.XPATH,
-                            "//button[contains(text(),'Allow all') or "
-                            "contains(text(),'Accept all') or "
-                            "contains(text(),'Accept All') or "
-                            "contains(text(),'Accept')]",
+                            "//button[contains(., 'Allow all') or "
+                            "contains(., 'Accept all') or "
+                            "contains(., 'Accept All') or "
+                            "contains(., 'Accept')]",
                         )
                     )
                 )
                 cookies_button.click()
                 print("Clicked cookies/accept button on Instagram")
-                time.sleep(2)
+                time.sleep(3)
             except Exception:
                 print("No cookies/accept banner detected")
 
-            # Now wait a bit longer for the login fields
+            # Wait longer for the username field (handle timeout cleanly)
             try:
-                username_field = WebDriverWait(driver, 20).until(
+                username_field = WebDriverWait(driver, 40).until(
                     EC.presence_of_element_located((By.NAME, "username"))
                 )
             except Exception:
-                # Fallback: look for input[type='text'] if name is different
-                try:
-                    username_field = WebDriverWait(driver, 5).until(
-                        EC.presence_of_element_located(
-                            (
-                                By.CSS_SELECTOR,
-                                "input[name='username'], input[type='text']",
-                            )
-                        )
-                    )
-                except Exception:
-                    print(
-                        "Could not find username field on Instagram login page",
-                        file=sys.stderr,
-                    )
-                    traceback.print_exc()
-                    return None
-
-            password_field = driver.find_element(By.NAME, "password")
-
-            username_field.send_keys(INSTAGRAM_USERNAME)
-            password_field.send_keys(INSTAGRAM_PASSWORD)
-
-            login_button = driver.find_element(
-                By.CSS_SELECTOR, "button[type='submit']"
-            )
-            login_button.click()
-
-            time.sleep(5)
+                print(
+                    "Timed out waiting for username field on Instagram login page",
+                    file=sys.stderr,
+                )
+                traceback.print_exc()
+                return None
 
             try:
-                WebDriverWait(driver, 10).until(
+                password_field = WebDriverWait(driver, 10).until(
+                    EC.presence_of_element_located((By.NAME, "password"))
+                )
+            except Exception:
+                print(
+                    "Timed out waiting for password field on Instagram login page",
+                    file=sys.stderr,
+                )
+                traceback.print_exc()
+                return None
+
+            username_field.clear()
+            username_field.send_keys(INSTAGRAM_USERNAME)
+            password_field.clear()
+            password_field.send_keys(INSTAGRAM_PASSWORD)
+
+            try:
+                login_button = WebDriverWait(driver, 10).until(
+                    EC.element_to_be_clickable(
+                        (By.CSS_SELECTOR, "button[type='submit']")
+                    )
+                )
+            except Exception:
+                print(
+                    "Timed out waiting for login button on Instagram login page",
+                    file=sys.stderr,
+                )
+                traceback.print_exc()
+                return None
+
+            login_button.click()
+            time.sleep(8)
+
+            try:
+                WebDriverWait(driver, 15).until(
                     EC.presence_of_element_located(
                         (By.CSS_SELECTOR, "svg[aria-label='Home']")
                     )
@@ -239,6 +251,7 @@ def refresh_session_selenium():
         print("Error refreshing Instagram session:", file=sys.stderr)
         traceback.print_exc()
         return None
+
 
 
 def get_valid_session():
