@@ -29,11 +29,9 @@ INSTAGRAM_PASSWORD = os.getenv("INSTAGRAM_PASSWORD", "Allahisgreat@1234567")
 
 # On Render, prefer a persistent disk (e.g. /data). Fallback to local file when not on Render.
 SESSION_FILE = Path(
-    os.getenv(
-        "INSTAGRAM_SESSION_FILE",
-        "/data/session_data.json" if os.getenv("RENDER") else "session_data.json",
-    )
+    os.getenv("INSTAGRAM_SESSION_FILE", "session_data.json")
 )
+
 
 # Selenium Remote WebDriver URL (Selenium standalone Chrome running elsewhere)
 # Example: http://<vps-ip>:4444/wd/hub
