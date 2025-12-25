@@ -801,6 +801,26 @@ def debug_session_file():
         "cwd": os.getcwd()
     }), 200
 
+@app.route("/_bootstrap/upload-session", methods=["POST"])
+def bootstrap_upload_session():
+    src = Path("session_data.json")
+    dst = Path("/data/session_data.json")
+
+    if not src.exists():
+        return jsonify({
+            "success": False,
+            "error": "session_data.json not found in app directory"
+        }), 400
+
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    dst.write_bytes(src.read_bytes())
+
+    return jsonify({
+        "success": True,
+        "message": "session_data.json copied to /data"
+    }), 200
+
+
 
 
 # --------------------------------------------------------------------------------------
