@@ -68,7 +68,7 @@ def load_session():
     except Exception as e:
         print("[SESSION] Failed to load session file:", e)
 
-
+load_session()
 
 def save_session():
     """Save session to file"""
