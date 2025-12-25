@@ -817,6 +817,8 @@ def bootstrap_upload_session():
     dst.parent.mkdir(parents=True, exist_ok=True)
     dst.write_bytes(src.read_bytes())
 
+    load_session()
+
     return jsonify({
         "success": True,
         "message": "session_data.json copied to /data"
