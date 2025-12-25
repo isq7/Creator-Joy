@@ -46,18 +46,27 @@ session_data = {
 
 
 def load_session():
-    """Load session from file"""
     global session_data
 
-    if SESSION_FILE.exists():
-        try:
-            with open(SESSION_FILE, "r") as f:
-                data = json.load(f)
-                session_data["cookie"] = data.get("cookie")
-                session_data["expires_at"] = data.get("expires_at")
-                print(f"Loaded Instagram session from file: {SESSION_FILE}")
-        except Exception as e:
-            print(f"Failed to load session file: {e}", file=sys.stderr)
+    print(f"[SESSION] Looking for session file at: {SESSION_FILE}")
+
+    if not SESSION_FILE.exists():
+        print("[SESSION] session_data.json NOT FOUND")
+        return
+
+    try:
+        with open(SESSION_FILE, "r") as f:
+            data = json.load(f)
+
+        session_data["cookie"] = data.get("cookie")
+        session_data["expires_at"] = data.get("expires_at")
+
+        print("[SESSION] session_data.json loaded successfully")
+        print("[SESSION] cookies:", list(session_data["cookie"].keys()) if session_data["cookie"] else None)
+        print("[SESSION] expires_at:", session_data["expires_at"])
+
+    except Exception as e:
+        print("[SESSION] Failed to load session file:", e)
 
 
 def save_session():
@@ -93,124 +102,42 @@ def is_session_valid():
 
 def refresh_session_selenium():
     """
-    Refresh session using Selenium.
-    Uses Remote WebDriver (SELENIUM_REMOTE_URL) so that
-    Chrome runs in a separate Selenium container/host.
+    Manual, local-only Instagram session capture.
+    - If already logged in → just extract cookies
+    - If login page → user logs in manually
     """
     try:
         from selenium import webdriver
-        from selenium.webdriver.common.by import By
-        from selenium.webdriver.support.ui import WebDriverWait
-        from selenium.webdriver.support import expected_conditions as EC
         from selenium.webdriver.chrome.options import Options
+        from selenium.webdriver.common.by import By
+        import time
+        import traceback
 
-        if not SELENIUM_REMOTE_URL:
-            print(
-                "SELENIUM_REMOTE_URL not set; cannot refresh Instagram session",
-                file=sys.stderr,
-            )
-            return None
-
-        print(f"Refreshing Instagram session via Selenium Remote at {SELENIUM_REMOTE_URL}...")
+        print("Starting local Selenium for Instagram session capture...")
 
         chrome_options = Options()
-        # Headless usually controlled on Selenium host; these flags still help stability.
+        chrome_options.add_argument("--disable-notifications")
+        chrome_options.add_argument("--disable-infobars")
+        chrome_options.add_argument("--start-maximized")
         chrome_options.add_argument("--no-sandbox")
         chrome_options.add_argument("--disable-dev-shm-usage")
-        chrome_options.add_argument("--disable-gpu")
-        chrome_options.add_argument("--window-size=1920,1080")
-        chrome_options.add_argument(
-            "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-            "AppleWebKit/537.36 (KHTML, like Gecko) "
-            "Chrome/120.0.0.0 Safari/537.36"
-        )
 
-        # Remote WebDriver instead of local Chrome
-        driver = webdriver.Remote(
-            command_executor=SELENIUM_REMOTE_URL,
-            options=chrome_options,
-        )
+        # ✅ Selenium Manager handles driver automatically
+        driver = webdriver.Chrome(options=chrome_options)
 
         try:
             driver.get("https://www.instagram.com/accounts/login/")
-            # give time for page + JS over remote connection
-            time.sleep(10)
+            time.sleep(6)
 
-            # Try to accept cookies / allow all if banner appears
-            try:
-                cookies_button = WebDriverWait(driver, 15).until(
-                    EC.element_to_be_clickable(
-                        (
-                            By.XPATH,
-                            "//button[contains(., 'Allow all') or "
-                            "contains(., 'Accept all') or "
-                            "contains(., 'Accept All') or "
-                            "contains(., 'Accept')]",
-                        )
-                    )
-                )
-                cookies_button.click()
-                print("Clicked cookies/accept button on Instagram")
-                time.sleep(3)
-            except Exception:
-                print("No cookies/accept banner detected")
+            # ✅ If already logged in, URL will NOT contain /accounts/login
+            if "accounts/login" not in driver.current_url:
+                print("Already logged into Instagram")
+            else:
+                print("Login page detected — please log in manually in the browser")
+                time.sleep(30)  # YOU log in here manually
 
-            # Wait longer for the username field (handle timeout cleanly)
-            try:
-                username_field = WebDriverWait(driver, 40).until(
-                    EC.presence_of_element_located((By.NAME, "username"))
-                )
-            except Exception:
-                print(
-                    "Timed out waiting for username field on Instagram login page",
-                    file=sys.stderr,
-                )
-                traceback.print_exc()
-                return None
-
-            try:
-                password_field = WebDriverWait(driver, 10).until(
-                    EC.presence_of_element_located((By.NAME, "password"))
-                )
-            except Exception:
-                print(
-                    "Timed out waiting for password field on Instagram login page",
-                    file=sys.stderr,
-                )
-                traceback.print_exc()
-                return None
-
-            username_field.clear()
-            username_field.send_keys(INSTAGRAM_USERNAME)
-            password_field.clear()
-            password_field.send_keys(INSTAGRAM_PASSWORD)
-
-            try:
-                login_button = WebDriverWait(driver, 10).until(
-                    EC.element_to_be_clickable(
-                        (By.CSS_SELECTOR, "button[type='submit']")
-                    )
-                )
-            except Exception:
-                print(
-                    "Timed out waiting for login button on Instagram login page",
-                    file=sys.stderr,
-                )
-                traceback.print_exc()
-                return None
-
-            login_button.click()
-            time.sleep(8)
-
-            try:
-                WebDriverWait(driver, 15).until(
-                    EC.presence_of_element_located(
-                        (By.CSS_SELECTOR, "svg[aria-label='Home']")
-                    )
-                )
-                print("Instagram login successful")
-            except Exception:
-                print("Instagram login may have failed or needs verification")
+            # Give time for redirect after login
+            time.sleep(5)
 
             cookies = driver.get_cookies()
             auth_cookies = {}
@@ -229,7 +156,7 @@ def refresh_session_selenium():
                     auth_cookies[name] = cookie.get("value")
 
             if "sessionid" not in auth_cookies:
-                print("sessionid missing, login failed")
+                print("Session capture failed: sessionid not found")
                 return None
 
             session_data["cookie"] = auth_cookies
@@ -238,33 +165,31 @@ def refresh_session_selenium():
             ).isoformat()
 
             save_session()
-            print(f"Saved Instagram cookies: {list(auth_cookies.keys())}")
+            print("Instagram session cookies saved successfully")
+
             return auth_cookies
 
         finally:
             driver.quit()
 
-    except ImportError:
-        print("Selenium not installed. Install with: pip install selenium", file=sys.stderr)
-        return None
-    except Exception as e:
-        print("Error refreshing Instagram session:", file=sys.stderr)
+    except Exception:
+        print("Error refreshing Instagram session:")
         traceback.print_exc()
         return None
 
 
 
+
 def get_valid_session():
-    """Get a valid session cookie, refresh if needed"""
     if not session_data["cookie"]:
         load_session()
 
     if is_session_valid():
-        print("Using existing Instagram session")
         return session_data["cookie"]
 
-    print("Instagram session expired or missing, refreshing...")
-    return refresh_session_selenium()
+    # ❌ DO NOT AUTO LOGIN
+    return None
+
 
 
 class InstagramScraperAPI:
@@ -652,110 +577,126 @@ def instagram_refresh_session_endpoint():
     cookie = refresh_session_selenium()
 
     if cookie:
-        return jsonify({"success": True, "message": "Session refreshed successfully"})
-    else:
-        msg = "Failed to refresh session"
-        if not SELENIUM_REMOTE_URL:
-            msg += " (SELENIUM_REMOTE_URL not configured)"
-        return jsonify({"success": False, "error": msg}), 500
+        return jsonify({
+            "success": True,
+            "message": "Session refreshed successfully"
+        }), 200
+
+    return jsonify({
+        "success": False,
+        "error": "Failed to refresh session"
+    }), 500
 
 
 @app.route("/instagram/scrape", methods=["POST"])
 def instagram_scrape_reels():
     try:
-        data = request.get_json()
+        data = request.get_json(force=True, silent=False)
+
+        if not data:
+            return jsonify({
+                "success": False,
+                "error": "Missing JSON body"
+            }), 400
 
         target_username = data.get("target_username")
         days = int(data.get("days", 90))
         max_reels = int(data.get("max_reels", 50))
 
         if not target_username:
-            return (
-                jsonify(
-                    {"success": False, "error": "target_username is required"}
-                ),
-                400,
-            )
+            return jsonify({
+                "success": False,
+                "error": "target_username is required"
+            }), 400
 
         print(
             f"Instagram scrape request for @{target_username} "
             f"(max {max_reels}, {days} days)"
         )
 
+        # 🔒 Cookie-only session (NO AUTO LOGIN)
         session_cookie = get_valid_session()
 
         if not session_cookie:
-            return (
-                jsonify(
-                    {
-                        "success": False,
-                        "error": "Could not obtain valid Instagram session",
-                    }
-                ),
-                401,
-            )
+            return jsonify({
+                "success": False,
+                "error": "Instagram session expired",
+                "code": "IG_SESSION_EXPIRED",
+                "action": "Re-login manually and upload fresh cookies"
+            }), 401
 
         scraper = InstagramScraperAPI(session_cookie)
         reels = scraper.scrape_reels(
-            target_username, days=days, max_reels=max_reels
+            target_username,
+            days=days,
+            max_reels=max_reels
         )
 
         if not reels:
-            return jsonify(
-                {
-                    "success": True,
-                    "count": 0,
-                    "target_username": target_username,
-                    "reels": [],
-                    "message": "No reels found",
-                }
-            )
+            return jsonify({
+                "success": True,
+                "count": 0,
+                "target_username": target_username,
+                "reels": [],
+                "message": "No reels found"
+            }), 200
 
         print(f"Instagram: {len(reels)} reels scraped")
 
-        view_counts = [r["view_count"] for r in reels]
+        view_counts = [r.get("view_count", 0) for r in reels]
         view_counts_sorted = sorted(view_counts)
+
         median_views = (
-            view_counts_sorted[len(view_counts_sorted) // 2] if view_counts else 0
+            view_counts_sorted[len(view_counts_sorted) // 2]
+            if view_counts_sorted else 0
         )
-        avg_views = sum(view_counts) // len(view_counts) if view_counts else 0
+        avg_views = (
+            sum(view_counts) // len(view_counts)
+            if view_counts else 0
+        )
 
-        outlier_threshold = median_views * 2
-        outliers = [r for r in reels if r["view_count"] > outlier_threshold]
+        outlier_threshold = median_views * 2 if median_views else 0
+        outliers = [
+            r for r in reels if r.get("view_count", 0) > outlier_threshold
+        ]
 
-        return jsonify(
-            {
-                "success": True,
-                "count": len(reels),
-                "target_username": target_username,
-                "days_limit": days,
-                "max_reels_limit": max_reels,
-                "reels": reels,
-                "stats": {
-                    "total_views": sum(r["view_count"] for r in reels),
-                    "total_likes": sum(r["likes"] for r in reels),
-                    "total_comments": sum(r["comments"] for r in reels),
-                    "avg_views": avg_views,
-                    "median_views": median_views,
-                    "min_views": min(view_counts) if view_counts else 0,
-                    "max_views": max(view_counts) if view_counts else 0,
-                    "outliers_count": len(outliers),
-                    "outlier_threshold": outlier_threshold,
-                    "consistency_score": round(
-                        (median_views / avg_views * 100), 2
-                    )
-                    if avg_views > 0
-                    else 0,
-                },
+        return jsonify({
+            "success": True,
+            "count": len(reels),
+            "target_username": target_username,
+            "days_limit": days,
+            "max_reels_limit": max_reels,
+            "reels": reels,
+            "stats": {
+                "total_views": sum(view_counts),
+                "total_likes": sum(r.get("likes", 0) for r in reels),
+                "total_comments": sum(r.get("comments", 0) for r in reels),
+                "avg_views": avg_views,
+                "median_views": median_views,
+                "min_views": min(view_counts) if view_counts else 0,
+                "max_views": max(view_counts) if view_counts else 0,
+                "outliers_count": len(outliers),
+                "outlier_threshold": outlier_threshold,
+                "consistency_score": round(
+                    (median_views / avg_views) * 100, 2
+                ) if avg_views > 0 else 0,
             }
-        )
+        }), 200
 
     except ValueError as ve:
         print(f"Instagram error: {ve}", file=sys.stderr)
-        return jsonify({"success": False, "error": str(ve)}), 400
+        return jsonify({
+            "success": False,
+            "error": str(ve)
+        }), 400
+
     except Exception as e:
-        print(f"Instagram error: {e}", file=sys.stderr)
-        return jsonify({"success": False, "error": str(e)}), 500
+        print("Instagram scrape failed:", file=sys.stderr)
+        traceback.print_exc()
+        return jsonify({
+            "success": False,
+            "error": "Internal server error"
+        }), 500
 
 
 # --------------------------------------------------------------------------------------
