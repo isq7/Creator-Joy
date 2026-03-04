@@ -5,6 +5,7 @@ import AssetCard from './AssetCard';
 import LoadingSpinner from './LoadingSpinner';
 import CustomDropdown from './CustomDropdown';
 import RangeSlider from './RangeSlider';
+import SliderDropdown from './SliderDropdown';
 import './HomeScreen.css';
 
 function HomeScreen({ onPlatformSelect, platform, outliers, generatedContent = [], sourceVideos = [], avatarVideos = [], bookmarks = [], onVideoClick, isLoading, currentView, onAction, onViewChange, onImageClick, onToggleBookmark, searchQuery = '', onSearchChange }) {
@@ -341,7 +342,8 @@ function HomeScreen({ onPlatformSelect, platform, outliers, generatedContent = [
                             {/* Only show views and multiplier filters for outlier view or bookmarks (since they are videos) */}
                             {(!isGeneratedView || currentView === 'bookmarks') && (
                                 <>
-                                    <RangeSlider
+                                    <SliderDropdown
+                                        label="Outlier Score"
                                         min={1}
                                         max={500}
                                         step={1}
@@ -350,11 +352,12 @@ function HomeScreen({ onPlatformSelect, platform, outliers, generatedContent = [
                                             max: activeFilters?.outlierScore?.max || 500
                                         }}
                                         onChange={(val) => handleFilterChange('outlierScore', val)}
-                                        label="Outlier Score"
                                         unit="x"
+                                        colorClass="outlier-picker"
                                     />
 
-                                    <RangeSlider
+                                    <SliderDropdown
+                                        label="Views"
                                         min={0}
                                         max={100}
                                         step={1}
@@ -384,13 +387,13 @@ function HomeScreen({ onPlatformSelect, platform, outliers, generatedContent = [
                                                 max: sliderToShorthand(val.max)
                                             });
                                         }}
-                                        label="Views"
                                         formatValue={(sVal) => {
                                             const totalVal = Math.pow(10, (sVal / 25) + 3);
                                             if (totalVal >= 1000000) return `${Math.round(totalVal / 1000000)}M`;
                                             if (totalVal >= 1000) return `${Math.round(totalVal / 1000)}k`;
                                             return Math.round(totalVal);
                                         }}
+                                        colorClass="views-picker"
                                     />
                                 </>
                             )}

@@ -34,7 +34,6 @@ const RangeSlider = ({ min, max, step, value, onChange, label, unit = '', format
         <div className="range-slider-container">
             <div className="range-slider-labels">
                 <span className="slider-value">{formatValue ? formatValue(minValue) : minValue}{unit}</span>
-                <span className="slider-label">{label}</span>
                 <span className="slider-value">{formatValue ? formatValue(maxValue) : maxValue}{unit}</span>
             </div>
             <div className="slider-track-container">
