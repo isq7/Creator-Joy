@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Bookmark, FileText, Image, Type, Video, Sparkles } from 'lucide-react';
+import { Bookmark, FileText, Image, Type, Video, Sparkles, PlayCircle } from 'lucide-react';
 import { triggerN8nWebhook } from '../services/api';
 import InstagramEmbed from './InstagramEmbed';
 import './OutlierCard.css';
@@ -110,6 +110,13 @@ function OutlierCard({ video, onVideoClick, isHighest, currentView, onAction, is
                         e.target.src = `https://images.placeholders.dev/?width=640&height=360&text=IG-Thumbnail&bgColor=%230a0a0a&textColor=%23ffffff`;
                     }}
                 />
+
+                {/* Play Button Overlay */}
+                <div className="play-overlay">
+                    <div className="play-btn">
+                        <PlayCircle size={48} fill="white" color="white" strokeWidth={1.5} />
+                    </div>
+                </div>
 
                 {/* Save Button Overlay */}
                 <button
