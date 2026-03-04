@@ -748,14 +748,15 @@ export async function fetchVideosByIds(videoIds) {
                 .select('*')
                 .or(orFilter);
             if (rawError || !rawData?.length) return [];
-            return transformSupabaseResponse(rawData, 'instagram');
+            return transformSupabaseResponse(rawData, 'instagram').outliers || [];
         }
 
         const rawVideos = data || [];
         console.log(`[API] fetchVideosByIds: got ${rawVideos.length} rows from view`);
 
         // Use the same transformSupabaseResponse as the home feed — guarantees identical creator/date/multiplier
-        return transformSupabaseResponse(rawVideos, 'instagram');
+        // NOTE: transformSupabaseResponse returns { platform, outliers:[...] } — unwrap the array
+        return transformSupabaseResponse(rawVideos, 'instagram').outliers || [];
     } catch (err) {
         console.error('Fetch videos by IDs error:', err);
         return [];
