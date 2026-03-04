@@ -76,15 +76,6 @@ function AssetCard({ asset, sourceVideo, onVideoClick, onImageClick }) {
                                     e.target.src = 'https://images.placeholders.dev/?width=640&height=360&text=No+Preview&bgColor=%230a0a0a&textColor=%23444';
                                 }}
                             />
-                            {/* Outlier score badge */}
-                            {sourceVideo.multiplier && sourceVideo.multiplier > 0 && (
-                                <div className={`source-multiplier-badge ${sourceVideo.multiplier >= 7 ? 'multiplier-high' :
-                                        sourceVideo.multiplier >= 3 ? 'multiplier-medium' : 'multiplier-low'
-                                    }`}>
-                                    {sourceVideo.multiplier >= 5 ? '🚀 ' : sourceVideo.multiplier >= 2 ? '🔥 ' : ''}
-                                    {parseFloat(sourceVideo.multiplier).toFixed(1)}x
-                                </div>
-                            )}
                             <div className="source-play-overlay">
                                 <div className="source-play-btn">
                                     <PlayCircle size={18} fill="white" color="white" strokeWidth={1.5} />
@@ -94,6 +85,15 @@ function AssetCard({ asset, sourceVideo, onVideoClick, onImageClick }) {
                         </div>
 
                         <div className="source-video-meta">
+                            {/* Outlier score badge — prominently at the top of the meta column */}
+                            {sourceVideo.multiplier > 0 && (
+                                <div className={`source-score-badge ${sourceVideo.multiplier >= 7 ? 'score-high' :
+                                        sourceVideo.multiplier >= 3 ? 'score-medium' : 'score-low'
+                                    }`}>
+                                    {sourceVideo.multiplier >= 5 ? '🚀' : sourceVideo.multiplier >= 2 ? '🔥' : '⬆️'}
+                                    {' '}{parseFloat(sourceVideo.multiplier).toFixed(1)}x outlier
+                                </div>
+                            )}
                             {sourceVideo.title ? (
                                 <div className="source-video-title">{sourceVideo.title}</div>
                             ) : (

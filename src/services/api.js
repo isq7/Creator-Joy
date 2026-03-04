@@ -736,76 +736,26 @@ export async function fetchVideosByIds(videoIds) {
         }
 
         const { data, error } = await supabase
-            .from('videos')
+            .from(VIEW_NAME)
             .select('*')
             .or(orFilter);
 
         if (error) {
-            console.error('Error fetching videos:', error);
-            return [];
+            console.error('Error fetching videos by IDs (view):', error);
+            // Fallback: try raw videos table
+            const { data: rawData, error: rawError } = await supabase
+                .from('videos')
+                .select('*')
+                .or(orFilter);
+            if (rawError || !rawData?.length) return [];
+            return transformSupabaseResponse(rawData, 'instagram');
         }
 
-        // Transform each video manually (avoid the localhost 50x duplication in transformSupabaseResponse)
         const rawVideos = data || [];
-        console.log(`[API] fetchVideosByIds: got ${rawVideos.length} rows from DB`);
-        return rawVideos.map(video => {
-            // `platform_video_id` is the actual column (e.g. YouTube ID, Instagram shortcode)
-            // `id` is the DB UUID primary key
-            const platformVid = video.platform_video_id || '';
-            const videoId = platformVid || video.id || Math.random().toString(36).substring(7);
+        console.log(`[API] fetchVideosByIds: got ${rawVideos.length} rows from view`);
 
-            let embedUrl = null;
-            let thumbnail = video.thumbnail_url;
-
-            if (video.platform === 'youtube' && video.video_url) {
-                const yid = video.video_url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([^&\n?#]+)/)?.[1];
-                if (yid) embedUrl = `https://www.youtube.com/embed/${yid}`;
-            } else if (video.platform === 'instagram' && video.video_url) {
-                const shortcode = video.video_url.match(/(?:instagram\.com\/(?:p|reel|reels)\/)([^/?#&]+)/)?.[1];
-                if (shortcode) {
-                    embedUrl = `https://www.instagram.com/p/${shortcode}/embed`;
-                    thumbnail = video.thumbnail_url || `https://images.placeholders.dev/?width=640&height=360&text=Instagram+Reel&bgColor=%231a1a2e&textColor=%23ffffff`;
-                }
-            }
-
-            if (thumbnail && (thumbnail.includes('dropbox.com') || thumbnail.includes('db.tt'))) {
-                thumbnail = thumbnail.replace('?dl=0', '?raw=1').replace('&dl=0', '&raw=1');
-            }
-
-            return {
-                // Expose all three ID representations so HomeScreen matching is robust
-                _rawId: video.id,              // DB UUID primary key
-                id: video.id,                  // Same as above, for v.id matching
-                video_id: videoId,             // Platform video ID (what n8n stores in assets.video_id)
-                _platformId: platformVid,      // Explicit platform ID alias
-                title: video.title && video.title !== '(title not found)' ? video.title : '',
-                thumbnail: thumbnail || `https://images.placeholders.dev/?width=640&height=360&text=No%20Image&bgColor=%230a0a0a&textColor=%23ffffff`,
-                views: video.views || 0,
-                median_views: video.median_views || 0,
-                multiplier: parseFloat(video.multiplier) || 1.1,
-                video_url: video.video_url,
-                embed_url: embedUrl,
-                // Same date logic as transformSupabaseResponse
-                date_posted: video.published_at || video.posted_at || null,
-                relative_time: getRelativeTime(video.published_at || video.posted_at),
-                creator: (() => {
-                    // Try DB columns first
-                    if (video.creator_username) return video.creator_username;
-                    if (video.username) return video.username;
-                    // Fallback: extract from URL
-                    const url = video.video_url || '';
-                    // Instagram: instagram.com/@handle/reel/... or instagram.com/handle/
-                    const igHandle = url.match(/instagram\.com\/@?([^/?\s]+)\//)?.[1];
-                    if (igHandle && !['p', 'reel', 'reels', 'stories'].includes(igHandle)) return igHandle;
-                    // YouTube: /@handle, /c/name, /user/name
-                    const ytHandle = url.match(/youtube\.com\/(?:@|c\/|user\/)([^/?\s&]+)/)?.[1];
-                    if (ytHandle) return ytHandle;
-                    return 'Creator';
-                })(),
-                platform: video.platform,
-            };
-
-        });
+        // Use the same transformSupabaseResponse as the home feed — guarantees identical creator/date/multiplier
+        return transformSupabaseResponse(rawVideos, 'instagram');
     } catch (err) {
         console.error('Fetch videos by IDs error:', err);
         return [];
