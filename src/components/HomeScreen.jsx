@@ -1,43 +1,36 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import OutlierCard from './OutlierCard';
 import AssetCard from './AssetCard';
 import LoadingSpinner from './LoadingSpinner';
-import CustomDropdown from './CustomDropdown';
-import RangeSlider from './RangeSlider';
-import SliderDropdown from './SliderDropdown';
+import FiltersPanel from './FiltersPanel';
 import './HomeScreen.css';
 
+const DEFAULT_FILTERS = {
+    outlierScore: { min: 1, max: 250 },
+    views: { min: '1k', max: '1B' },
+    subscribers: { min: '1k', max: '50M' },
+    dateRange: 'all',
+};
+
+const DATE_RANGE_DAYS = {
+    'all': Infinity,
+    '7d': 7,
+    '30d': 30,
+    '90d': 90,
+    '180d': 180,
+    '365d': 365,
+    '730d': 730,
+};
+
 function HomeScreen({ onPlatformSelect, platform, outliers, generatedContent = [], sourceVideos = [], avatarVideos = [], bookmarks = [], onVideoClick, isLoading, currentView, onAction, onViewChange, onImageClick, onToggleBookmark, searchQuery = '', onSearchChange }) {
-    // 1. All Hooks first (Rules of Hooks)
-    const [sortBy, setSortBy] = useState('multiplier_desc'); // keeps sorting global or we can scope it later
+    const [sortBy, setSortBy] = useState('multiplier_desc');
+    const [showFiltersPanel, setShowFiltersPanel] = useState(false);
+    const [filters, setFilters] = useState({ ...DEFAULT_FILTERS });
+    const [columns, setColumns] = useState(4);
+
     const isGeneratedView = ['idea', 'title', 'thumbnail', 'avatar_video'].includes(currentView);
     const isBookmarksView = currentView === 'bookmarks';
-    const isHomeView = currentView === 'home';
-
-    // Scoped state for each view to keep filters and visibility individual
-    // Everyone gets the same structure to prevent "undefined" crashes
-    const defaultFilters = {
-        outlierScore: { min: 1, max: 250 },
-        views: { min: '1k', max: '10M' },
-        dateRange: 'all'
-    };
-
-    const [viewStates, setViewStates] = useState({
-        home: { showFilters: false, filters: { ...defaultFilters } },
-        bookmarks: { showFilters: false, filters: { ...defaultFilters } },
-        idea: { showFilters: false, filters: { ...defaultFilters } },
-        title: { showFilters: false, filters: { ...defaultFilters } },
-        thumbnail: { showFilters: false, filters: { ...defaultFilters } },
-        avatar_video: { showFilters: false, filters: { ...defaultFilters } },
-        trackers: { showFilters: false, filters: { ...defaultFilters } }
-    });
-
-    const currentViewState = viewStates?.[currentView] || viewStates?.home || { showFilters: false, filters: defaultFilters };
-    const activeFilters = currentViewState?.filters || defaultFilters;
-    const activeShowFilters = currentViewState?.showFilters || false;
-    const activeDateRange = activeFilters?.dateRange || 'all';
-
 
     const getPageTitle = () => {
         switch (currentView) {
@@ -49,12 +42,11 @@ function HomeScreen({ onPlatformSelect, platform, outliers, generatedContent = [
         }
     };
 
-    // Helper to parse relative time into days for filtering
+    // Helper: parse "1w ago" → days
     const parseTimeToDays = (relativeTime) => {
         if (!relativeTime) return 9999;
         const time = relativeTime.toLowerCase();
         const value = parseInt(time) || 0;
-
         if (time.includes('h')) return value / 24;
         if (time.includes('d')) return value;
         if (time.includes('w')) return value * 7;
@@ -63,239 +55,124 @@ function HomeScreen({ onPlatformSelect, platform, outliers, generatedContent = [
         return 9999;
     };
 
-    const dateRangeOptions = {
-        'all': 'All time',
-        '24h': 'Last 24 hours',
-        '7d': 'Last 7 days',
-        '30d': 'Last 30 days',
-        '90d': 'Last 90 days'
+    // Helper: parse shorthand like "1k", "2.5M", "1B" → number
+    const parseShorthand = (val) => {
+        if (typeof val === 'number') return val;
+        if (!val) return 0;
+        const n = val.toString().toLowerCase().trim();
+        const mult = n.endsWith('b') ? 1e9 : n.endsWith('m') ? 1e6 : n.endsWith('k') ? 1e3 : 1;
+        return (parseFloat(n) || 0) * mult;
     };
 
-    const dateRangeDays = {
-        'all': Infinity,
-        '24h': 1,
-        '7d': 7,
-        '30d': 30,
-        '90d': 90
-    };
-
-    // Filter and sort for Asset views and Bookmarks
+    // Filter assets (generated content, avatars, bookmarks)
     const filteredAssets = useMemo(() => {
         if (!isGeneratedView && currentView !== 'bookmarks') return [];
 
-        // Special handling for avatar videos
         if (currentView === 'avatar_video') {
-            let result = [...avatarVideos];
-
-            // Apply date filter if available
-            if (activeDateRange !== 'all') {
-                const daysLimit = dateRangeDays[activeDateRange];
-                result = result.filter(item => {
-                    if (!item.created_at) return false;
-                    const createdDate = new Date(item.created_at);
-                    const diffDays = (new Date() - createdDate) / (1000 * 60 * 60 * 24);
-                    return diffDays >= 0 && diffDays <= daysLimit;
+            let r = [...avatarVideos];
+            if (filters.dateRange !== 'all') {
+                const lim = DATE_RANGE_DAYS[filters.dateRange];
+                r = r.filter(i => {
+                    if (!i.created_at) return false;
+                    return (new Date() - new Date(i.created_at)) / 86400000 <= lim;
                 });
             }
-
-            return result.filter(item => {
-                if (!searchQuery) return true;
-                const searchLower = searchQuery.toLowerCase();
-                return (item.video_url || '').toLowerCase().includes(searchLower);
-            });
+            return r.filter(i => !searchQuery || (i.video_url || '').toLowerCase().includes(searchQuery.toLowerCase()));
         }
 
-        // Special handling for Bookmarks
         if (currentView === 'bookmarks') {
-            let result = [...bookmarks];
-
-            // Apply date filter
-            if (activeDateRange !== 'all') {
-                const daysLimit = dateRangeDays[activeDateRange];
-                result = result.filter(item => {
-                    const dateField = item.bookmarked_at || item.date_posted;
-                    if (!dateField) return false;
-                    const createdDate = new Date(dateField);
-                    const diffDays = (new Date() - createdDate) / (1000 * 60 * 60 * 24);
-                    return diffDays >= 0 && diffDays <= daysLimit;
+            let r = [...bookmarks];
+            if (filters.dateRange !== 'all') {
+                const lim = DATE_RANGE_DAYS[filters.dateRange];
+                r = r.filter(i => {
+                    const d = i.bookmarked_at || i.date_posted;
+                    if (!d) return false;
+                    return (new Date() - new Date(d)) / 86400000 <= lim;
                 });
             }
-
-            return result.filter(item => {
-                if (!searchQuery) return true;
-                const searchLower = searchQuery.toLowerCase();
-                return (item.title || '').toLowerCase().includes(searchLower) ||
-                    (item.creator || '').toLowerCase().includes(searchLower);
-            });
+            return r.filter(i => !searchQuery || (i.title || '').toLowerCase().includes(searchQuery.toLowerCase()) || (i.creator || '').toLowerCase().includes(searchQuery.toLowerCase()));
         }
 
-        const typeMap = { 'idea': 'script', 'title': 'title', 'thumbnail': 'thumbnail' };
-        const targetType = typeMap[currentView];
-
-        let result = generatedContent.filter(item => item.type === targetType);
-
-        // Date filter for assets
-        if (activeDateRange !== 'all') {
-            const daysLimit = dateRangeDays[activeDateRange];
-            result = result.filter(item => {
-                if (!item.created_at) return false;
-                const createdDate = new Date(item.created_at);
-                const diffDays = (new Date() - createdDate) / (1000 * 60 * 60 * 24);
-                return diffDays >= 0 && diffDays <= daysLimit;
+        const typeMap = { idea: 'script', title: 'title', thumbnail: 'thumbnail' };
+        let r = generatedContent.filter(i => i.type === typeMap[currentView]);
+        if (filters.dateRange !== 'all') {
+            const lim = DATE_RANGE_DAYS[filters.dateRange];
+            r = r.filter(i => {
+                if (!i.created_at) return false;
+                return (new Date() - new Date(i.created_at)) / 86400000 <= lim;
             });
         }
-
-        return result
-            .filter(item => {
-                if (!searchQuery) return true;
-                const searchLower = searchQuery.toLowerCase();
-                return (item.content || '').toLowerCase().includes(searchLower) ||
-                    (item.video_id || '').toLowerCase().includes(searchLower);
-            })
+        return r
+            .filter(i => !searchQuery || (i.content || '').toLowerCase().includes(searchQuery.toLowerCase()))
             .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-    }, [generatedContent, avatarVideos, bookmarks, currentView, isGeneratedView, searchQuery, viewStates]);
+    }, [generatedContent, avatarVideos, bookmarks, currentView, isGeneratedView, searchQuery, filters.dateRange]);
 
-    // Filter and sort outliers based on search and filters
+    // Filter & sort outliers
     const filteredOutliers = useMemo(() => {
         if (isGeneratedView || currentView === 'bookmarks' || !outliers) return [];
 
-        let result = outliers.filter(video => {
-            // Search filter - check title or creator
-            const searchLower = searchQuery.toLowerCase();
-            if (searchQuery &&
-                !(video.title || '').toLowerCase().includes(searchLower) &&
-                !(video.creator || '').toLowerCase().includes(searchLower)) {
-                return false;
-            }
+        let r = outliers.filter(video => {
+            const sl = searchQuery.toLowerCase();
+            if (searchQuery && !(video.title || '').toLowerCase().includes(sl) && !(video.creator || '').toLowerCase().includes(sl)) return false;
 
-            // Shorthand parser for K, M, B
-            const parseShorthand = (val) => {
-                if (typeof val === 'number') return val;
-                if (!val) return 0;
-                const normalized = val.toString().toLowerCase().trim();
-                const multiplier = normalized.endsWith('k') ? 1000 :
-                    normalized.endsWith('m') ? 1000000 :
-                        normalized.endsWith('b') ? 1000000000 : 1;
-                const num = parseFloat(normalized) || 0;
-                return num * multiplier;
-            };
+            const mult = parseFloat(video.multiplier) || 0;
+            if (mult < (filters.outlierScore?.min ?? 0) || mult > (filters.outlierScore?.max ?? Infinity)) return false;
 
-            // Multiplier filter
-            const multiplier = parseFloat(video.multiplier) || 0;
-            const minMultiplier = (activeFilters?.outlierScore?.min === '' || activeFilters?.outlierScore?.min === undefined) ? 0 : parseShorthand(activeFilters.outlierScore.min);
-            const maxMultiplier = (activeFilters?.outlierScore?.max === '' || activeFilters?.outlierScore?.max === undefined) ? Infinity : parseShorthand(activeFilters.outlierScore.max);
+            const minV = parseShorthand(filters.views?.min);
+            const maxV = filters.views?.max ? parseShorthand(filters.views.max) : Infinity;
+            if (video.views < minV || video.views > maxV) return false;
 
-            if (multiplier < minMultiplier || multiplier > maxMultiplier) {
-                return false;
-            }
+            // Subscriber filter (field: subscribers or subscriber_count)
+            const subs = video.subscribers || video.subscriber_count || 0;
+            const minS = parseShorthand(filters.subscribers?.min);
+            const maxS = filters.subscribers?.max ? parseShorthand(filters.subscribers.max) : Infinity;
+            if (subs > 0 && (subs < minS || subs > maxS)) return false;
 
-            // Views filter
-            const minViews = (activeFilters?.views?.min === '' || activeFilters?.views?.min === undefined) ? 0 : parseShorthand(activeFilters.views.min);
-            const maxViews = (activeFilters?.views?.max === '' || activeFilters?.views?.max === undefined) ? Infinity : parseShorthand(activeFilters.views.max);
-
-            if (video.views < minViews || video.views > maxViews) {
-                return false;
-            }
-
-            // Date filter
-            if (activeDateRange !== 'all') {
-                const daysLimit = dateRangeDays[activeDateRange];
-                const videoDays = parseTimeToDays(video.relative_time);
-                if (videoDays > daysLimit) return false;
+            if (filters.dateRange !== 'all') {
+                const lim = DATE_RANGE_DAYS[filters.dateRange];
+                if (parseTimeToDays(video.relative_time) > lim) return false;
             }
 
             return true;
         });
 
-        // Apply sorting
-        return result.sort((a, b) => {
-            const multA = parseFloat(a.multiplier) || 0;
-            const multB = parseFloat(b.multiplier) || 0;
-
-            if (sortBy === 'multiplier_desc') {
-                return multB - multA;
-            } else {
-                return multA - multB;
-            }
+        return r.sort((a, b) => {
+            const mA = parseFloat(a.multiplier) || 0;
+            const mB = parseFloat(b.multiplier) || 0;
+            return sortBy === 'multiplier_desc' ? mB - mA : mA - mB;
         });
-    }, [outliers, searchQuery, viewStates, sortBy, isGeneratedView, currentView]);
+    }, [outliers, searchQuery, filters, sortBy, isGeneratedView, currentView]);
 
-    // Find the highest multiplier in the current result set
     const maxMultiplier = useMemo(() => {
-        if (filteredOutliers.length === 0) return 0;
+        if (!filteredOutliers.length) return 0;
         return Math.max(...filteredOutliers.map(v => parseFloat(v.multiplier) || 0));
     }, [filteredOutliers]);
 
-    // 2. Helper functions
-    const handleFilterChange = (filterType, value) => {
-        setViewStates(prev => {
-            const current = prev[currentView] || prev.home;
-            return {
-                ...prev,
-                [currentView]: {
-                    ...current,
-                    filters: { ...current.filters, [filterType]: value }
-                }
-            };
-        });
-    };
-
-    const toggleFilters = () => {
-        setViewStates(prev => {
-            const current = prev[currentView] || prev.home;
-            return {
-                ...prev,
-                [currentView]: { ...current, showFilters: !current.showFilters }
-            };
-        });
-    };
-
-    const clearAllFilters = () => {
-        setViewStates(prev => ({
-            ...prev,
-            [currentView]: {
-                ...prev[currentView],
-                filters: { ...defaultFilters }
-            }
-        }));
-        setSearchQuery('');
+    const handleApplyFilters = (newFilters, newColumns) => {
+        setFilters(newFilters);
+        setColumns(newColumns);
     };
 
     const handleEmptyButtonClick = () => {
         if (isGeneratedView || currentView === 'bookmarks') {
             onViewChange('home');
         } else {
-            clearAllFilters();
+            setFilters({ ...DEFAULT_FILTERS });
         }
     };
 
-    const platformLabels = {
-        youtube: 'YouTube',
-        instagram: 'Instagram',
-        facebook: 'Facebook'
-    };
-
-    // 3. Conditional Rendering (after hooks)
-    // Platform selection screen - shown when no platform is selected
+    // Platform selection screen
     if (!platform) {
         return (
             <div className="home-screen">
                 <div className="platform-selection">
                     <h1 className="selection-title">Select Platform</h1>
                     <div className="platform-buttons">
-                        <button
-                            className="platform-button youtube"
-                            onClick={() => onPlatformSelect('youtube')}
-                            disabled={isLoading}
-                        >
+                        <button className="platform-button youtube" onClick={() => onPlatformSelect('youtube')} disabled={isLoading}>
                             <span className="platform-icon">📺</span>
                             <span className="platform-label">YouTube</span>
                         </button>
-                        <button
-                            className="platform-button instagram"
-                            onClick={() => onPlatformSelect('instagram')}
-                            disabled={isLoading}
-                        >
+                        <button className="platform-button instagram" onClick={() => onPlatformSelect('instagram')} disabled={isLoading}>
                             <span className="platform-icon">📷</span>
                             <span className="platform-label">Instagram</span>
                         </button>
@@ -311,15 +188,21 @@ function HomeScreen({ onPlatformSelect, platform, outliers, generatedContent = [
         );
     }
 
-    // Main Content (Results)
     const hasResults = (isGeneratedView || isBookmarksView) ? filteredAssets.length > 0 : filteredOutliers.length > 0;
-
-
 
     return (
         <div className="home-screen">
+            <FiltersPanel
+                isOpen={showFiltersPanel}
+                onClose={() => setShowFiltersPanel(false)}
+                filters={filters}
+                onApply={handleApplyFilters}
+                columns={columns}
+                onColumnsChange={setColumns}
+            />
+
             <div className="main-content">
-                {/* Header Section */}
+                {/* Header */}
                 <div className="search-filters-section">
                     <div className="header-top-row">
                         <h1 className="page-title">
@@ -328,102 +211,16 @@ function HomeScreen({ onPlatformSelect, platform, outliers, generatedContent = [
                         </h1>
                         <div className="header-actions">
                             <button
-                                className={`action-btn-pill filters ${activeShowFilters ? 'active' : ''}`}
-                                onClick={toggleFilters}
+                                className={`action-btn-pill filters ${showFiltersPanel ? 'active' : ''}`}
+                                onClick={() => setShowFiltersPanel(true)}
                             >
-                                <span className="icon">⚙️</span>
-                                Filters
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                    <line x1="4" y1="6" x2="20" y2="6" /><line x1="8" y1="12" x2="16" y2="12" /><line x1="11" y1="18" x2="13" y2="18" />
+                                </svg>
+                                Filters &amp; Views
                             </button>
                         </div>
                     </div>
-
-                    {activeShowFilters && (
-                        <div className="filters-horizontal-bar">
-                            {/* Only show views and multiplier filters for outlier view or bookmarks (since they are videos) */}
-                            {(!isGeneratedView || currentView === 'bookmarks') && (
-                                <>
-                                    <SliderDropdown
-                                        label="Outlier Score"
-                                        min={1}
-                                        max={250}
-                                        step={1}
-                                        value={{
-                                            min: activeFilters?.outlierScore?.min || 1,
-                                            max: activeFilters?.outlierScore?.max || 250
-                                        }}
-                                        onChange={(val) => handleFilterChange('outlierScore', val)}
-                                        unit="x"
-                                        colorClass="outlier-picker"
-                                    />
-
-                                    <SliderDropdown
-                                        label="Views"
-                                        min={0}
-                                        max={100}
-                                        step={1}
-                                        value={(() => {
-                                            const parseShorthandToSlider = (val) => {
-                                                if (!val) return 0;
-                                                const normalized = val.toString().toLowerCase().trim();
-                                                const num = parseFloat(normalized);
-                                                if (normalized.endsWith('k')) return (Math.log10(num * 1000) - 3) * 25;
-                                                if (normalized.endsWith('m')) return (Math.log10(num * 1000000) - 3) * 25;
-                                                return (Math.log10(num || 1000) - 3) * 25;
-                                            };
-                                            return {
-                                                min: parseShorthandToSlider(activeFilters?.views?.min || '1k'),
-                                                max: parseShorthandToSlider(activeFilters?.views?.max || '10M')
-                                            };
-                                        })()}
-                                        onChange={(val) => {
-                                            const sliderToShorthand = (sVal) => {
-                                                const totalVal = Math.pow(10, (sVal / 25) + 3);
-                                                if (totalVal >= 1000000) return `${Math.round(totalVal / 1000000)}M`;
-                                                if (totalVal >= 1000) return `${Math.round(totalVal / 1000)}k`;
-                                                return `${Math.round(totalVal)}`;
-                                            };
-                                            handleFilterChange('views', {
-                                                min: sliderToShorthand(val.min),
-                                                max: sliderToShorthand(val.max)
-                                            });
-                                        }}
-                                        formatValue={(sVal) => {
-                                            const totalVal = Math.pow(10, (sVal / 25) + 3);
-                                            if (totalVal >= 1000000) return `${Math.round(totalVal / 1000000)}M`;
-                                            if (totalVal >= 1000) return `${Math.round(totalVal / 1000)}k`;
-                                            return Math.round(totalVal);
-                                        }}
-                                        colorClass="views-picker"
-                                    />
-                                </>
-                            )}
-
-                            <CustomDropdown
-                                label={isGeneratedView ? "Created" : "Posted"}
-                                value={activeDateRange}
-                                options={Object.entries(dateRangeOptions).map(([value, label]) => ({ value, label }))}
-                                onChange={(val) => handleFilterChange('dateRange', val)}
-                                colorClass="date-chip"
-                            />
-
-                            {(!isGeneratedView || currentView === 'bookmarks') && (
-                                <CustomDropdown
-                                    label="Sort"
-                                    value={sortBy}
-                                    options={[
-                                        { value: 'multiplier_desc', label: 'Multiplier: High to Low' },
-                                        { value: 'multiplier_asc', label: 'Multiplier: Low to High' }
-                                    ]}
-                                    onChange={setSortBy}
-                                    colorClass="sort-chip"
-                                />
-                            )}
-
-                            <button className="clear-all-link" onClick={clearAllFilters}>
-                                Clear all filters
-                            </button>
-                        </div>
-                    )}
                 </div>
 
                 {/* Grid */}
@@ -449,15 +246,9 @@ function HomeScreen({ onPlatformSelect, platform, outliers, generatedContent = [
                                     ? `Generate your first ${currentView === 'idea' ? 'script' : currentView} from the Home feed to see it here.`
                                     : 'Try adjusting your filters or search query.'}
                         </p>
-                        {(searchQuery || isGeneratedView || currentView === 'bookmarks' || JSON.stringify(activeFilters) !== JSON.stringify({
-                            outlierScore: { min: 1, max: 500 },
-                            views: { min: '1k', max: '10M' },
-                            dateRange: 'all'
-                        })) && (
-                                <button className="retry-button" onClick={handleEmptyButtonClick}>
-                                    {isGeneratedView || currentView === 'bookmarks' ? 'Back to Home' : 'Clear filters'}
-                                </button>
-                            )}
+                        <button className="retry-button" onClick={handleEmptyButtonClick}>
+                            {isGeneratedView || currentView === 'bookmarks' ? 'Back to Home' : 'Clear filters'}
+                        </button>
                     </div>
                 ) : (
                     <div className="outliers-container">
@@ -465,6 +256,7 @@ function HomeScreen({ onPlatformSelect, platform, outliers, generatedContent = [
                             layout
                             transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
                             className={`outliers-grid ${isGeneratedView ? 'assets-grid' : ''}`}
+                            style={!isGeneratedView ? { gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` } : undefined}
                         >
                             {(() => {
                                 if (isBookmarksView) {
@@ -482,17 +274,7 @@ function HomeScreen({ onPlatformSelect, platform, outliers, generatedContent = [
                                 }
 
                                 if (isGeneratedView) {
-                                    // Debug log to help diagnose ID mismatches
-                                    if (filteredAssets.length > 0 && sourceVideos.length === 0) {
-                                        console.warn('[AssetCard] sourceVideos is empty — source video thumbnails will not show.');
-                                    } else if (filteredAssets.length > 0) {
-                                        console.log('[AssetCard] Matching assets to sourceVideos:', {
-                                            assetVideoIds: [...new Set(filteredAssets.map(a => a.video_id))],
-                                            sourceVideoIds: sourceVideos.map(v => ({ video_id: v.video_id, id: v.id })),
-                                        });
-                                    }
                                     return filteredAssets.map((asset, index) => {
-                                        // Match by platform video_id, DB UUID id, or preserved _rawId
                                         const sourceVideo = sourceVideos.find(v =>
                                             (v.video_id && String(v.video_id) === String(asset.video_id)) ||
                                             (v.id && String(v.id) === String(asset.video_id)) ||
@@ -510,7 +292,6 @@ function HomeScreen({ onPlatformSelect, platform, outliers, generatedContent = [
                                     });
                                 }
 
-                                // Default Home Case
                                 return filteredOutliers.map((video, index) => (
                                     <OutlierCard
                                         key={`outlier-${video.video_id || video.video_url || index}`}
