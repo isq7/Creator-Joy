@@ -161,32 +161,28 @@
 .source-score-badge {
     display: inline-flex;
     align-items: center;
-    gap: 3px;
-    font-size: 0.62rem;
+    gap: 4px;
+    font-size: 0.85rem;
     font-weight: 800;
-    padding: 2px 7px;
-    border-radius: 5px;
+    padding: 2px 8px;
+    border-radius: 6px;
     width: fit-content;
-    letter-spacing: 0.02em;
+    letter-spacing: -0.01em;
     margin-bottom: 2px;
+    color: white;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 .source-score-badge.score-high {
-    background: rgba(0, 200, 83, 0.18);
-    color: #00e676;
-    border: 1px solid rgba(0, 200, 83, 0.35);
+    background: #f43f5e;
 }
 
 .source-score-badge.score-medium {
-    background: rgba(255, 167, 38, 0.18);
-    color: #ffa726;
-    border: 1px solid rgba(255, 167, 38, 0.35);
+    background: #a855f7;
 }
 
 .source-score-badge.score-low {
-    background: rgba(100, 149, 237, 0.18);
-    color: #90caf9;
-    border: 1px solid rgba(100, 149, 237, 0.35);
+    background: #475569;
 }
 
 /* Old thumbnail badge (kept for safety but not used) */
@@ -208,15 +204,21 @@
 /* Corner variant — pinned to top-right of the source-video-block tile */
 .source-score-badge--corner {
     position: absolute;
-    top: -8px;
+    top: -12px;
     right: 8px;
     margin: 0;
-    font-size: 0.65rem;
-    padding: 3px 8px;
-    border-radius: 6px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
-    z-index: 5;
+    font-size: 0.9rem;
+    padding: 4px 12px;
+    border-radius: 8px;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+    z-index: 30;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
+
+.source-video-block:hover .source-score-badge--corner {
+    transform: scale(1.1);
+}
+
 
 /* Inline embed (shown after click) */
 .source-embed-wrapper {

@@ -87,7 +87,7 @@ function AssetCard({ asset, sourceVideo, onVideoClick, onImageClick }) {
                         {/* Multiplier badge pinned to top-right of the tile */}
                         {sourceVideo.multiplier > 0 && (
                             <div className={`source-score-badge source-score-badge--corner ${sourceVideo.multiplier >= 7 ? 'score-high' :
-                                    sourceVideo.multiplier >= 3 ? 'score-medium' : 'score-low'
+                                sourceVideo.multiplier >= 3 ? 'score-medium' : 'score-low'
                                 }`}>
                                 {sourceVideo.multiplier >= 25 ? '💥' :
                                     sourceVideo.multiplier >= 15 ? '🧨' :
@@ -95,7 +95,9 @@ function AssetCard({ asset, sourceVideo, onVideoClick, onImageClick }) {
                                             sourceVideo.multiplier >= 5 ? '🚀' :
                                                 sourceVideo.multiplier >= 2 ? '🔥' : null}
                                 {sourceVideo.multiplier >= 2 && ' '}
-                                {parseFloat(sourceVideo.multiplier).toFixed(1)}x
+                                {parseFloat(sourceVideo.multiplier).toFixed(
+                                    sourceVideo.multiplier >= 10 ? 1 : 1
+                                )}x
                             </div>
                         )}
 
