@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
-import { Sparkles, Type, Image, FileText, Video, PlayCircle, X } from 'lucide-react';
+import React from 'react';
+import { Sparkles, Type, Image, FileText, Video, PlayCircle } from 'lucide-react';
 import './AssetCard.css';
 
 function AssetCard({ asset, sourceVideo, onVideoClick, onImageClick }) {
     const { type, content, created_at, video_url, thumbnail_url } = asset;
-    const [showEmbed, setShowEmbed] = useState(false);
+
 
     const getIcon = () => {
         switch (type) {
@@ -22,15 +22,6 @@ function AssetCard({ asset, sourceVideo, onVideoClick, onImageClick }) {
         return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
     };
 
-    // Extract Instagram shortcode for embed
-    const getInstagramEmbedUrl = (url) => {
-        if (!url) return null;
-        const match = url.match(/instagram\.com\/(?:p|reel|reels)\/([^/?#&]+)/);
-        if (match) return `https://www.instagram.com/p/${match[1]}/embed/`;
-        return null;
-    };
-
-    const embedUrl = getInstagramEmbedUrl(sourceVideo?.video_url);
 
     // Content cleaning
     const rawContent = String(content || '').trim();
@@ -73,60 +64,36 @@ function AssetCard({ asset, sourceVideo, onVideoClick, onImageClick }) {
 
                     <div
                         className="source-video-block"
-                        onClick={() => embedUrl ? setShowEmbed(true) : (onVideoClick && onVideoClick(sourceVideo))}
-                        title={embedUrl ? "Click to play video" : "Click to open video"}
+                        onClick={() => onVideoClick && onVideoClick(sourceVideo)}
+                        title="Click to watch video"
                     >
-                        {showEmbed && embedUrl ? (
-                            /* Embedded Instagram player */
-                            <div className="source-embed-wrapper">
-                                <button
-                                    className="embed-close-btn"
-                                    onClick={(e) => { e.stopPropagation(); setShowEmbed(false); }}
-                                    title="Close"
-                                >
-                                    <X size={14} />
-                                </button>
-                                <iframe
-                                    src={embedUrl}
-                                    className="source-embed-frame"
-                                    frameBorder="0"
-                                    scrolling="no"
-                                    allowFullScreen
-                                    title="Source video"
-                                />
+                        {/* Thumbnail + play overlay — always opens VideoModal on click */}
+                        <div className="source-thumb-large">
+                            <img
+                                src={sourceVideo.thumbnail}
+                                alt={sourceVideo.title}
+                                onError={(e) => {
+                                    e.target.src = 'https://images.placeholders.dev/?width=640&height=360&text=No+Preview&bgColor=%230a0a0a&textColor=%23444';
+                                }}
+                            />
+                            <div className="source-play-overlay">
+                                <div className="source-play-btn">
+                                    <PlayCircle size={18} fill="white" color="white" strokeWidth={1.5} />
+                                </div>
+                                <div className="source-hover-bg" />
                             </div>
-                        ) : (
-                            /* Small thumbnail with play overlay */
-                            <>
-                                <div className="source-thumb-large">
-                                    <img
-                                        src={sourceVideo.thumbnail}
-                                        alt={sourceVideo.title}
-                                        onError={(e) => {
-                                            e.target.src = 'https://images.placeholders.dev/?width=640&height=360&text=No+Preview&bgColor=%230a0a0a&textColor=%23444';
-                                        }}
-                                    />
-                                    <div className="source-play-overlay">
-                                        <div className="source-play-btn">
-                                            <PlayCircle size={18} fill="white" color="white" strokeWidth={1.5} />
-                                        </div>
-                                        <div className="source-hover-bg" />
-                                    </div>
-                                </div>
+                        </div>
 
-                                {/* Video title + creator next to thumbnail */}
-                                <div className="source-video-meta">
-                                    {sourceVideo.title ? (
-                                        <div className="source-video-title">{sourceVideo.title}</div>
-                                    ) : (
-                                        <div className="source-video-title source-video-title--empty">Untitled Video</div>
-                                    )}
-                                    {sourceVideo.creator && sourceVideo.creator !== 'Creator' && (
-                                        <div className="source-video-creator">@{String(sourceVideo.creator).replace(/^@/, '')}</div>
-                                    )}
-                                </div>
-                            </>
-                        )}
+                        <div className="source-video-meta">
+                            {sourceVideo.title ? (
+                                <div className="source-video-title">{sourceVideo.title}</div>
+                            ) : (
+                                <div className="source-video-title source-video-title--empty">Untitled Video</div>
+                            )}
+                            {sourceVideo.creator && sourceVideo.creator !== 'Creator' && (
+                                <div className="source-video-creator">@{String(sourceVideo.creator).replace(/^@/, '')}</div>
+                            )}
+                        </div>
                     </div>
                 </div>
             )}
