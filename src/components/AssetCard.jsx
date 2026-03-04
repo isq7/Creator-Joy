@@ -67,7 +67,7 @@ function AssetCard({ asset, sourceVideo, onVideoClick, onImageClick }) {
                         onClick={() => onVideoClick && onVideoClick(sourceVideo)}
                         title="Click to watch video"
                     >
-                        {/* Thumbnail + multiplier badge + play overlay */}
+                        {/* Thumbnail */}
                         <div className="source-thumb-large">
                             <img
                                 src={sourceVideo.thumbnail}
@@ -84,16 +84,22 @@ function AssetCard({ asset, sourceVideo, onVideoClick, onImageClick }) {
                             </div>
                         </div>
 
+                        {/* Multiplier badge pinned to top-right of the tile */}
+                        {sourceVideo.multiplier > 0 && (
+                            <div className={`source-score-badge source-score-badge--corner ${sourceVideo.multiplier >= 7 ? 'score-high' :
+                                    sourceVideo.multiplier >= 3 ? 'score-medium' : 'score-low'
+                                }`}>
+                                {sourceVideo.multiplier >= 25 ? '💥' :
+                                    sourceVideo.multiplier >= 15 ? '🧨' :
+                                        sourceVideo.multiplier >= 10 ? '💎' :
+                                            sourceVideo.multiplier >= 5 ? '🚀' :
+                                                sourceVideo.multiplier >= 2 ? '🔥' : null}
+                                {sourceVideo.multiplier >= 2 && ' '}
+                                {parseFloat(sourceVideo.multiplier).toFixed(1)}x
+                            </div>
+                        )}
+
                         <div className="source-video-meta">
-                            {/* Outlier score badge — prominently at the top of the meta column */}
-                            {sourceVideo.multiplier > 0 && (
-                                <div className={`source-score-badge ${sourceVideo.multiplier >= 7 ? 'score-high' :
-                                        sourceVideo.multiplier >= 3 ? 'score-medium' : 'score-low'
-                                    }`}>
-                                    {sourceVideo.multiplier >= 5 ? '🚀' : sourceVideo.multiplier >= 2 ? '🔥' : '⬆️'}
-                                    {' '}{parseFloat(sourceVideo.multiplier).toFixed(1)}x outlier
-                                </div>
-                            )}
                             {sourceVideo.title ? (
                                 <div className="source-video-title">{sourceVideo.title}</div>
                             ) : (
