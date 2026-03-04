@@ -1,0 +1,14 @@
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Copy package files
+COPY proxy-package.json ./package.json
+RUN npm install
+
+# Copy extractor code
+COPY instagram-extractor.js .
+
+EXPOSE 3005
+
+CMD ["node", "instagram-extractor.js"]

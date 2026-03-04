@@ -1,0 +1,14 @@
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Copy proxy package files
+COPY proxy-package.json package.json
+RUN npm install
+
+# Copy proxy server code
+COPY thumbnail-proxy.js .
+
+EXPOSE 3001
+
+CMD ["npm", "start"]

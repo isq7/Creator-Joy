@@ -1,0 +1,33 @@
+# Environment variables
+.env
+.env.local
+
+# Logs and large text files
+logs
+*.log
+*.txt
+npm-debug.log*
+
+# Images and Media
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.webp
+
+# Python
+__pycache__/
+*.pyc
+
+# Dependencies
+node_modules
+dist
+dist-ssr
+
+# Editor and OS files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.sln

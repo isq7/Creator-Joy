@@ -1,0 +1,74 @@
+# Air Ideas — SSO Integration Guide
+
+> **For**: The Air Ideas developer  
+> **Purpose**: Ensure seamless login for users coming from Air Clone  
+> **Date**: March 1, 2026
+
+## What Changed
+
+We fixed the SSO handoff between Air Clone and Air Ideas. The key change:
+
+**`creator_profiles` now stores `user_id`** — the Supabase Auth UUID of the person who created the clone. Previously this was always `NULL`.
+
+## What Air Ideas Needs To Do
+
+When a user opens Air Ideas (logged in via Supabase Auth), look up their clone using their Auth UUID:
+
+```typescript
+// Get the logged-in user
+const { data: { user } } = await supabase.auth.getUser();
+
+if (user) {
+  // Find their clone profile
+  const { data: profile } = await supabase
+    .from('creator_profiles')
+    .select('unique_identifier, handles, character_skill, platform, profile_pic_url')
+    .eq('user_id', user.id)
+    .single();
+
+  if (profile) {
+    // User has a clone → use profile.unique_identifier for everything
+    // This is the key that links to: assets, creator_posts, 
+    // air_leaderboards, air_publisher_videos, etc.
+    console.log('Clone found:', profile.unique_identifier);
+  } else {
+    // No clone yet → show "Create your clone first" or redirect to Air Clone
+    console.log('No clone found for this user');
+  }
+}
+```
+
+## Important: Do NOT Rely on Auth Metadata
+
+Previously, the plan was to store `unique_identifier` in `session.user.user_metadata`. **This does not work** — Supabase protects `auth.users.raw_user_meta_data` from direct SQL writes.
+
+Instead, always query `creator_profiles` directly using `user_id`.
+
+## `creator_profiles` Schema
+
+| Column | Type | Description |
+|---|---|---|
+| [id](file:///Users/adi/Projects/Air-Creator/air-clone/components/VideoSelectionGrid.tsx#4-14) | bigint (auto) | Primary key |
+| `handles` | text | Social media handle (e.g., `@auth0999`) |
+| `unique_identifier` | text | Clone ID (e.g., `igg_17841479788144075`) |
+| `user_id` | uuid | **Supabase Auth UUID** — links to `auth.users.id` |
+| `platform` | text | `instagram-graph`, `instagram-basic`, [youtube](file:///Users/adi/Projects/Air-Creator/supabase/functions/youtube-auth/index.ts#15-34), `tiktok`, `facebook` |
+| `character_skill` | text | AI-generated personality/skill profile |
+| `profile_pic_url` | text | User's profile photo |
+| `Niche` | text | Creator's niche category |
+
+## Tables That Use `unique_identifier`
+
+Once you have the `unique_identifier` from `creator_profiles`, use it to query:
+
+- `creator_posts` — analyzed content from their platform
+- `assets` — scripts, thumbnails, avatar videos
+- `progress_updates` — clone creation progress stages
+- `air_leaderboards` (as `creator_unique_identifier`) — rankings
+- `air_publisher_videos` (as `creator_unique_identifier`) — published content
+
+## Supabase Config
+
+- **Project**: `pezvnqhexxttlhcnbtta`
+- **Cookie domain**: `.aircreator.cloud` (shared across all subdomains)
+- **Auth**: Google OAuth + social platform OAuth (Instagram, YouTube, TikTok, Facebook)

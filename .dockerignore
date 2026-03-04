@@ -1,0 +1,8 @@
+node_modules
+dist
+.git
+.env*
+*.log
+README.md
+deploy.ps1
+package-lock.json
