@@ -61,11 +61,11 @@ function VideoModal({ video, onClose }) {
     return (
         <div className="modal-backdrop" onClick={handleBackdropClick}>
             {isInstagram ? (
-                /* --- INSTAGRAM CARD LAYOUT: load iframe directly, no preview step --- */
+                /* --- INSTAGRAM CARD LAYOUT --- */
                 <div className="ig-card">
                     <button className="modal-close" onClick={onClose} aria-label="Close modal">✕</button>
                     <div className="ig-frame-wrap">
-                        {/* Load immediately so user only clicks play once inside IG's own player */}
+                        {/* iframe always loads in background immediately */}
                         <iframe
                             src={video.embed_url}
                             className="ig-iframe"
@@ -74,6 +74,16 @@ function VideoModal({ video, onClose }) {
                             title={video.title || 'Instagram Reel'}
                         />
                         <div className="ig-bottom-mask"></div>
+
+                        {/* Play button floats over iframe where IG's own play button sits.
+                            Clicking it removes the overlay so cursor is now on IG's play button. */}
+                        {!isPlaying && (
+                            <div className="ig-play-overlay" onClick={() => setIsPlaying(true)}>
+                                <div className="ig-play-btn">
+                                    <Play fill="currentColor" size={28} />
+                                </div>
+                            </div>
+                        )}
 
                         {/* Multiplier badge */}
                         <div className="ig-meta-top">

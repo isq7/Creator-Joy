@@ -244,6 +244,53 @@
     z-index: 20;
 }
 
+/* ── IG Play Overlay ──────────────────────
+   Sits on top of the loaded iframe.
+   Full-area click target — centered play button.
+   Clicking removes the overlay; cursor lands right
+   on Instagram's own play button underneath. */
+.ig-play-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 22;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* Semi-transparent so user can see the IG thumbnail loading behind */
+    background: rgba(0, 0, 0, 0.18);
+    transition: background 0.2s ease;
+}
+
+.ig-play-overlay:hover {
+    background: rgba(0, 0, 0, 0.08);
+}
+
+.ig-play-btn {
+    width: 72px;
+    height: 50px;
+    background: #fff;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #000;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+    transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.25s ease;
+    pointer-events: none;
+    /* only the parent overlay captures clicks */
+}
+
+.ig-play-overlay:hover .ig-play-btn {
+    transform: scale(1.12);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.8);
+}
+
+.ig-play-btn svg {
+    margin-left: 3px;
+    /* optically center the triangle */
+}
+
 /* Metadata Overlay Container removed - moving to flow */
 
 .ig-meta-top {
