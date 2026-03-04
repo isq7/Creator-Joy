@@ -1,8 +1,10 @@
+import { useEffect, useState } from 'react';
 import { Eye, Play } from 'lucide-react';
 import './VideoModal.css';
 
 function VideoModal({ video, onClose }) {
     const [isPlaying, setIsPlaying] = useState(false);
+
     // Close modal on Escape key
     useEffect(() => {
         const handleEscape = (e) => {
@@ -16,11 +18,14 @@ function VideoModal({ video, onClose }) {
 
     // Prevent body scroll when modal is open
     useEffect(() => {
+        const originalStyle = window.getComputedStyle(document.body).overflow;
         document.body.style.overflow = 'hidden';
         return () => {
-            document.body.style.overflow = '';
+            document.body.style.overflow = originalStyle;
         };
     }, []);
+
+
 
     const handleBackdropClick = (e) => {
         if (e.target === e.currentTarget) {
