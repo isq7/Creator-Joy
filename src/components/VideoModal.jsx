@@ -60,40 +60,22 @@ function VideoModal({ video, onClose }) {
 
     return (
         <div className="modal-backdrop" onClick={handleBackdropClick}>
-            {/* Standard Modal or Instagram Card */}
             {isInstagram ? (
-                /* --- INSTAGRAM CARD LAYOUT (Based on Reference) --- */
+                /* --- INSTAGRAM CARD LAYOUT: load iframe directly, no preview step --- */
                 <div className="ig-card">
                     <button className="modal-close" onClick={onClose} aria-label="Close modal">✕</button>
                     <div className="ig-frame-wrap">
-                        {isPlaying ? (
-                            <iframe
-                                src={video.embed_url + (video.embed_url.includes('?') ? '&' : '?') + 'autoplay=1'}
-                                className="ig-iframe"
-                                allow="autoplay; encrypted-media"
-                                scrolling="no"
-                                title={video.title || 'Instagram Reel'}
-                            />
-                        ) : (
-                            <div className="video-preview-overlay" onClick={() => setIsPlaying(true)}>
-                                <img
-                                    src={video.thumbnail}
-                                    className="modal-preview-thumb"
-                                    alt={video.title}
-                                    onError={(e) => {
-                                        e.target.src = `https://images.placeholders.dev/?width=640&height=360&text=IG-Thumbnail&bgColor=%230a0a0a&textColor=%23ffffff`;
-                                    }}
-                                />
-                                <div className="proper-play-btn-wrapper">
-                                    <div className="proper-play-btn">
-                                        <Play fill="currentColor" size={32} />
-                                    </div>
-                                </div>
-                            </div>
-                        )}
+                        {/* Load immediately so user only clicks play once inside IG's own player */}
+                        <iframe
+                            src={video.embed_url}
+                            className="ig-iframe"
+                            allow="autoplay; encrypted-media"
+                            scrolling="no"
+                            title={video.title || 'Instagram Reel'}
+                        />
                         <div className="ig-bottom-mask"></div>
 
-                        {/* Top Meta (Multiplier) - Floating over video */}
+                        {/* Multiplier badge */}
                         <div className="ig-meta-top">
                             <div className={`ig-multiplier-badge ${getMultiplierColorClass(video.multiplier)}`}>
                                 {emoji && <span className="badge-emoji">{emoji}</span>}{video.multiplier}x
@@ -101,10 +83,8 @@ function VideoModal({ video, onClose }) {
                         </div>
                     </div>
 
-                    {/* Bottom Metadata - Now pushes card height dynamically */}
                     <div className="ig-meta-bottom-group">
                         <div className="ig-video-title-bottom">{video.title}</div>
-
                         <div className="ig-metadata-grid">
                             <div className="ig-meta-col">
                                 <span className="ig-meta-label">VIEWS</span>
@@ -134,7 +114,7 @@ function VideoModal({ video, onClose }) {
                     </div>
                 </div>
             ) : (
-                /* --- STANDARD LAYOUT (YouTube) --- */
+                /* --- STANDARD LAYOUT (YouTube): keep preview + play button --- */
                 <div className="modal-content vertical-video">
                     <button className="modal-close" onClick={onClose} aria-label="Close modal">✕</button>
                     <div className="video-container">
