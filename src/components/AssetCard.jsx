@@ -76,17 +76,6 @@ function AssetCard({ asset, sourceVideo, onVideoClick, onImageClick }) {
                                     e.target.src = 'https://images.placeholders.dev/?width=640&height=360&text=No+Preview&bgColor=%230a0a0a&textColor=%23444';
                                 }}
                             />
-                            {/* Outlier score badge */}
-                            {sourceVideo.multiplier && (
-                                <div className={`source-multiplier-badge ${sourceVideo.multiplier >= 7 ? 'multiplier-high' :
-                                        sourceVideo.multiplier >= 3 ? 'multiplier-medium' :
-                                            'multiplier-low'
-                                    }`}>
-                                    {parseFloat(sourceVideo.multiplier) >= 10
-                                        ? parseFloat(sourceVideo.multiplier).toFixed(1)
-                                        : parseFloat(sourceVideo.multiplier).toFixed(2)}x
-                                </div>
-                            )}
                             <div className="source-play-overlay">
                                 <div className="source-play-btn">
                                     <PlayCircle size={18} fill="white" color="white" strokeWidth={1.5} />

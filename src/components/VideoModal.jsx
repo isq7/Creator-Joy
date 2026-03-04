@@ -1,80 +1,93 @@
 import { useEffect, useState } from 'react';
-import { Eye, Play } from 'lucide-react';
+import { Play } from 'lucide-react';
 import './VideoModal.css';
 
 function VideoModal({ video, onClose }) {
-    // Show a visual play button — pointer-events:none so clicks pass through to the iframe
-    // window 'blur' fires the moment user clicks inside the iframe (iframe steals focus)
+    // For Instagram: visual play button (pointer-events:none, click passes to iframe)
     const [showPlayBtn, setShowPlayBtn] = useState(true);
+    // For YouTube: tracks whether iframe has been loaded
+    const [isPlaying, setIsPlaying] = useState(false);
 
-    // Hide play button once user interacts with iframe
+    // Hide IG play button once user clicks into iframe (window loses focus)
     useEffect(() => {
         const handleBlur = () => setShowPlayBtn(false);
         window.addEventListener('blur', handleBlur);
         return () => window.removeEventListener('blur', handleBlur);
     }, []);
 
-    // Close modal on Escape key
+    // Close on Escape key
     useEffect(() => {
-        const handleEscape = (e) => {
-            if (e.key === 'Escape') {
-                onClose();
-            }
-        };
+        const handleEscape = (e) => { if (e.key === 'Escape') onClose(); };
         window.addEventListener('keydown', handleEscape);
         return () => window.removeEventListener('keydown', handleEscape);
     }, [onClose]);
 
-    // Prevent body scroll when modal is open
+    // Prevent body scroll
     useEffect(() => {
-        const originalStyle = window.getComputedStyle(document.body).overflow;
+        const original = document.body.style.overflow;
         document.body.style.overflow = 'hidden';
-        return () => {
-            document.body.style.overflow = originalStyle;
-        };
+        return () => { document.body.style.overflow = original; };
     }, []);
 
-
-
     const handleBackdropClick = (e) => {
-        if (e.target === e.currentTarget) {
-            onClose();
-        }
+        if (e.target === e.currentTarget) onClose();
     };
 
     const isInstagram = video.video_url?.includes('instagram.com');
-    const isYouTubeShorts = video.video_url?.includes('shorts/');
 
-    const getMultiplierColorClass = (multiplier) => {
-        if (multiplier >= 7) return 'multiplier-high';
-        if (multiplier >= 3) return 'multiplier-medium';
+    // ── Helpers ──────────────────────────────────────────────
+    const getMultiplierColorClass = (m) => {
+        if (m >= 7) return 'multiplier-high';
+        if (m >= 3) return 'multiplier-medium';
         return 'multiplier-low';
     };
 
-    /**
-     * Get tiered emoji data based on multiplier value
-     * @param {number} multiplier 
-     * @returns {string} emoji
-     */
-    const getEmoji = (multiplier) => {
-        if (multiplier >= 25) return '💥';
-        if (multiplier >= 15) return '🧨';
-        if (multiplier >= 10) return '💎';
-        if (multiplier >= 5) return '🚀';
-        if (multiplier >= 2) return '🔥';
+    const getEmoji = (m) => {
+        if (m >= 25) return '💥';
+        if (m >= 15) return '🧨';
+        if (m >= 10) return '💎';
+        if (m >= 5) return '🚀';
+        if (m >= 2) return '🔥';
         return null;
     };
 
-    const emoji = getEmoji(video.multiplier);
+    /** Safe date formatter — shows 'N/A' for invalid/missing dates */
+    const formatDate = (dateStr) => {
+        if (!dateStr) return 'N/A';
+        const d = new Date(dateStr);
+        if (isNaN(d.getTime())) return 'N/A';
+        return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    };
+
+    /** Safe creator — hides the generic fallback values */
+    const formatCreator = (creator) => {
+        if (!creator || creator === 'Creator' || creator === 'creator') return null;
+        return creator.replace(/^@/, '');
+    };
+
+    /** Safe views formatter */
+    const formatViews = (v) => {
+        if (!v) return '—';
+        if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}M`;
+        if (v >= 1_000) return `${(v / 1_000).toFixed(0)}K`;
+        return String(v);
+    };
+
+    const multiplier = parseFloat(video.multiplier) || 0;
+    const emoji = getEmoji(multiplier);
+    const creatorHandle = formatCreator(video.creator);
 
     return (
         <div className="modal-backdrop" onClick={handleBackdropClick}>
+
+            {/* Single unified close button, always at top-right of backdrop */}
+            <button className="modal-backdrop-close" onClick={onClose} aria-label="Close modal">✕</button>
+
             {isInstagram ? (
-                /* --- INSTAGRAM CARD LAYOUT --- */
+                /* ─── INSTAGRAM CARD ─────────────────────────────────── */
                 <div className="ig-card">
-                    <button className="modal-close" onClick={onClose} aria-label="Close modal">✕</button>
                     <div className="ig-frame-wrap">
-                        {/* iframe always loads in background immediately */}
+                        {/* iframe loads immediately */}
                         <iframe
                             src={video.embed_url}
                             className="ig-iframe"
@@ -82,12 +95,9 @@ function VideoModal({ video, onClose }) {
                             scrolling="no"
                             title={video.title || 'Instagram Reel'}
                         />
-                        {/* Top mask — hides Instagram's embed header + X button */}
-                        <div className="ig-top-mask"></div>
                         <div className="ig-bottom-mask"></div>
 
-                        {/* Play button — pointer-events:none lets clicks pass straight to iframe.
-                            window blur fires when iframe takes focus (user clicked it) → button hides. */}
+                        {/* Play button — pointer-events:none, click falls through to iframe */}
                         {showPlayBtn && (
                             <div className="ig-play-overlay">
                                 <div className="ig-play-btn">
@@ -96,12 +106,14 @@ function VideoModal({ video, onClose }) {
                             </div>
                         )}
 
-                        {/* Multiplier badge */}
-                        <div className="ig-meta-top">
-                            <div className={`ig-multiplier-badge ${getMultiplierColorClass(video.multiplier)}`}>
-                                {emoji && <span className="badge-emoji">{emoji}</span>}{video.multiplier}x
+                        {/* Outlier score badge */}
+                        {multiplier > 0 && (
+                            <div className="ig-meta-top">
+                                <div className={`ig-multiplier-badge ${getMultiplierColorClass(multiplier)}`}>
+                                    {emoji && <span className="badge-emoji">{emoji}</span>}{multiplier}x
+                                </div>
                             </div>
-                        </div>
+                        )}
                     </div>
 
                     <div className="ig-meta-bottom-group">
@@ -109,43 +121,31 @@ function VideoModal({ video, onClose }) {
                         <div className="ig-metadata-grid">
                             <div className="ig-meta-col">
                                 <span className="ig-meta-label">VIEWS</span>
-                                <span className="ig-meta-value">
-                                    {video.views >= 1000000
-                                        ? `${(video.views / 1000000).toFixed(1)}M`
-                                        : `${(video.views / 1000).toFixed(0)}K`}
-                                </span>
+                                <span className="ig-meta-value">{formatViews(video.views)}</span>
                             </div>
                             <div className="ig-meta-col">
                                 <span className="ig-meta-label">PUBLISHED</span>
-                                <span className="ig-meta-value">
-                                    {video.date_posted && !isNaN(new Date(video.date_posted))
-                                        ? new Date(video.date_posted).toLocaleDateString('en-US', {
-                                            month: 'short',
-                                            day: 'numeric',
-                                            year: 'numeric'
-                                        })
-                                        : '—'}
-                                </span>
+                                <span className="ig-meta-value">{formatDate(video.date_posted)}</span>
                             </div>
-                            {video.creator && video.creator !== 'Creator' && (
+                            {creatorHandle && (
                                 <div className="ig-meta-col ig-meta-col-creator">
                                     <span className="ig-meta-label">CREATOR</span>
-                                    <span className="ig-meta-value creator-handle" title={`@${video.creator}`}>
-                                        @{video.creator}
+                                    <span className="ig-meta-value creator-handle" title={`@${creatorHandle}`}>
+                                        @{creatorHandle}
                                     </span>
                                 </div>
                             )}
                         </div>
                     </div>
                 </div>
+
             ) : (
-                /* --- STANDARD LAYOUT (YouTube): keep preview + play button --- */
+                /* ─── YOUTUBE / STANDARD LAYOUT ─────────────────────── */
                 <div className="modal-content vertical-video">
-                    <button className="modal-close" onClick={onClose} aria-label="Close modal">✕</button>
                     <div className="video-container">
                         {isPlaying ? (
                             <iframe
-                                src={video.embed_url + (video.embed_url.includes('?') ? '&' : '?') + 'autoplay=1'}
+                                src={video.embed_url + (video.embed_url?.includes('?') ? '&' : '?') + 'autoplay=1'}
                                 title={video.title || 'Embedded video'}
                                 frameBorder="0"
                                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -163,11 +163,29 @@ function VideoModal({ video, onClose }) {
                                         <Play fill="currentColor" size={32} />
                                     </div>
                                 </div>
+
+                                {/* Outlier score badge over thumbnail */}
+                                {multiplier > 0 && (
+                                    <div className="yt-score-badge-wrap">
+                                        <div className={`ig-multiplier-badge ${getMultiplierColorClass(multiplier)}`}>
+                                            {emoji && <span className="badge-emoji">{emoji}</span>}{multiplier}x
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         )}
                     </div>
                     <div className="standard-modal-info">
                         <h3>{video.title}</h3>
+                        <div className="yt-meta-row">
+                            <span className="yt-meta-item">{formatViews(video.views)} views</span>
+                            {formatDate(video.date_posted) !== 'N/A' && (
+                                <span className="yt-meta-item">{formatDate(video.date_posted)}</span>
+                            )}
+                            {creatorHandle && (
+                                <span className="yt-meta-item yt-creator">@{creatorHandle}</span>
+                            )}
+                        </div>
                     </div>
                 </div>
             )}
