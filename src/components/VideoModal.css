@@ -257,13 +257,9 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    /* Semi-transparent so user can see the IG thumbnail loading behind */
-    background: rgba(0, 0, 0, 0.18);
-    transition: background 0.2s ease;
-}
-
-.ig-play-overlay:hover {
-    background: rgba(0, 0, 0, 0.08);
+    background: transparent;
+    pointer-events: none;
+    /* clicks pass through to the iframe */
 }
 
 .ig-play-btn {

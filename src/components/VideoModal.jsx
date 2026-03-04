@@ -3,7 +3,16 @@ import { Eye, Play } from 'lucide-react';
 import './VideoModal.css';
 
 function VideoModal({ video, onClose }) {
-    const [isPlaying, setIsPlaying] = useState(false);
+    // Show a visual play button — pointer-events:none so clicks pass through to the iframe
+    // window 'blur' fires the moment user clicks inside the iframe (iframe steals focus)
+    const [showPlayBtn, setShowPlayBtn] = useState(true);
+
+    // Hide play button once user interacts with iframe
+    useEffect(() => {
+        const handleBlur = () => setShowPlayBtn(false);
+        window.addEventListener('blur', handleBlur);
+        return () => window.removeEventListener('blur', handleBlur);
+    }, []);
 
     // Close modal on Escape key
     useEffect(() => {
@@ -75,10 +84,10 @@ function VideoModal({ video, onClose }) {
                         />
                         <div className="ig-bottom-mask"></div>
 
-                        {/* Play button floats over iframe where IG's own play button sits.
-                            Clicking it removes the overlay so cursor is now on IG's play button. */}
-                        {!isPlaying && (
-                            <div className="ig-play-overlay" onClick={() => setIsPlaying(true)}>
+                        {/* Play button — pointer-events:none lets clicks pass straight to iframe.
+                            window blur fires when iframe takes focus (user clicked it) → button hides. */}
+                        {showPlayBtn && (
+                            <div className="ig-play-overlay">
                                 <div className="ig-play-btn">
                                     <Play fill="currentColor" size={28} />
                                 </div>
