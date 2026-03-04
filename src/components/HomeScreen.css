@@ -225,10 +225,10 @@
 /* Filters Horizontal Bar */
 .filters-horizontal-bar {
     display: flex;
-    align-items: center;
-    gap: 8px;
+    align-items: flex-end;
+    gap: 16px;
     flex-wrap: wrap;
-    margin-top: 4px;
+    margin-top: 8px;
 }
 
 .filter-chip-pixel {
@@ -281,38 +281,7 @@
     border-color: var(--border-color);
 }
 
-/* Hidden Inputs - Look like text */
-.chip-inputs {
-    display: flex;
-    align-items: center;
-    gap: 2px;
-    color: var(--text-primary);
-}
-
-.chip-inputs input {
-    background: transparent;
-    border: none;
-    color: inherit;
-    font-size: 1.1rem;
-    font-weight: 800;
-    min-width: 1ch;
-    text-align: center;
-    padding: 0;
-    outline: none;
-}
-
-/* Specific min-widths removed - now handled dynamically in JSX */
-
-.chip-inputs span {
-    opacity: 0.5;
-    font-weight: 400;
-}
-
-.chip-unit {
-    color: #4b5563;
-    margin-left: 2px;
-    font-weight: 600;
-}
+/* Filter slider styles handled in RangeSlider.css */
 
 /* Styled Selects */
 .filter-select-pixel,

@@ -4,6 +4,7 @@ import OutlierCard from './OutlierCard';
 import AssetCard from './AssetCard';
 import LoadingSpinner from './LoadingSpinner';
 import CustomDropdown from './CustomDropdown';
+import RangeSlider from './RangeSlider';
 import './HomeScreen.css';
 
 function HomeScreen({ onPlatformSelect, platform, outliers, generatedContent = [], sourceVideos = [], avatarVideos = [], bookmarks = [], onVideoClick, isLoading, currentView, onAction, onViewChange, onImageClick, onToggleBookmark, searchQuery = '', onSearchChange }) {
@@ -340,48 +341,57 @@ function HomeScreen({ onPlatformSelect, platform, outliers, generatedContent = [
                             {/* Only show views and multiplier filters for outlier view or bookmarks (since they are videos) */}
                             {(!isGeneratedView || currentView === 'bookmarks') && (
                                 <>
-                                    <div className="filter-chip-pixel outlier-chip">
-                                        <span className="chip-label">Outlier Score</span>
-                                        <div className="chip-inputs">
-                                            <input
-                                                type="text"
-                                                inputMode="decimal"
-                                                value={activeFilters?.outlierScore?.min || ''}
-                                                style={{ width: `${Math.max(1, String(activeFilters?.outlierScore?.min || '').length + 0.5)}ch` }}
-                                                onChange={(e) => handleFilterChange('outlierScore', { ...activeFilters?.outlierScore, min: e.target.value === '' ? '' : parseFloat(e.target.value) })}
-                                            />
-                                            <span>-</span>
-                                            <input
-                                                type="text"
-                                                inputMode="decimal"
-                                                value={activeFilters?.outlierScore?.max || ''}
-                                                style={{ width: `${Math.max(1, String(activeFilters?.outlierScore?.max || '').length + 0.5)}ch` }}
-                                                onChange={(e) => handleFilterChange('outlierScore', { ...activeFilters?.outlierScore, max: e.target.value === '' ? '' : parseFloat(e.target.value) })}
-                                            />
-                                            <span className="chip-unit">x</span>
-                                        </div>
-                                    </div>
+                                    <RangeSlider
+                                        min={1}
+                                        max={500}
+                                        step={1}
+                                        value={{
+                                            min: activeFilters?.outlierScore?.min || 1,
+                                            max: activeFilters?.outlierScore?.max || 500
+                                        }}
+                                        onChange={(val) => handleFilterChange('outlierScore', val)}
+                                        label="Outlier Score"
+                                        unit="x"
+                                    />
 
-                                    <div className="filter-chip-pixel views-chip">
-                                        <span className="chip-label">Views</span>
-                                        <div className="chip-inputs">
-                                            <input
-                                                type="text"
-                                                value={activeFilters?.views?.min || ''}
-                                                placeholder="Min"
-                                                style={{ width: `${Math.max(1, String(activeFilters?.views?.min || '').length + 0.5)}ch` }}
-                                                onChange={(e) => handleFilterChange('views', { ...activeFilters?.views, min: e.target.value })}
-                                            />
-                                            <span>-</span>
-                                            <input
-                                                type="text"
-                                                value={activeFilters?.views?.max || ''}
-                                                placeholder="Max"
-                                                style={{ width: `${Math.max(1, String(activeFilters?.views?.max || '').length + 0.5)}ch` }}
-                                                onChange={(e) => handleFilterChange('views', { ...activeFilters?.views, max: e.target.value })}
-                                            />
-                                        </div>
-                                    </div>
+                                    <RangeSlider
+                                        min={0}
+                                        max={100}
+                                        step={1}
+                                        value={(() => {
+                                            const parseShorthandToSlider = (val) => {
+                                                if (!val) return 0;
+                                                const normalized = val.toString().toLowerCase().trim();
+                                                const num = parseFloat(normalized);
+                                                if (normalized.endsWith('k')) return (Math.log10(num * 1000) - 3) * 25;
+                                                if (normalized.endsWith('m')) return (Math.log10(num * 1000000) - 3) * 25;
+                                                return (Math.log10(num || 1000) - 3) * 25;
+                                            };
+                                            return {
+                                                min: parseShorthandToSlider(activeFilters?.views?.min || '1k'),
+                                                max: parseShorthandToSlider(activeFilters?.views?.max || '10M')
+                                            };
+                                        })()}
+                                        onChange={(val) => {
+                                            const sliderToShorthand = (sVal) => {
+                                                const totalVal = Math.pow(10, (sVal / 25) + 3);
+                                                if (totalVal >= 1000000) return `${Math.round(totalVal / 1000000)}M`;
+                                                if (totalVal >= 1000) return `${Math.round(totalVal / 1000)}k`;
+                                                return `${Math.round(totalVal)}`;
+                                            };
+                                            handleFilterChange('views', {
+                                                min: sliderToShorthand(val.min),
+                                                max: sliderToShorthand(val.max)
+                                            });
+                                        }}
+                                        label="Views"
+                                        formatValue={(sVal) => {
+                                            const totalVal = Math.pow(10, (sVal / 25) + 3);
+                                            if (totalVal >= 1000000) return `${Math.round(totalVal / 1000000)}M`;
+                                            if (totalVal >= 1000) return `${Math.round(totalVal / 1000)}k`;
+                                            return Math.round(totalVal);
+                                        }}
+                                    />
                                 </>
                             )}
 
