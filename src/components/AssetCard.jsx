@@ -67,7 +67,7 @@ function AssetCard({ asset, sourceVideo, onVideoClick, onImageClick }) {
                         onClick={() => onVideoClick && onVideoClick(sourceVideo)}
                         title="Click to watch video"
                     >
-                        {/* Thumbnail + play overlay — always opens VideoModal on click */}
+                        {/* Thumbnail + multiplier badge + play overlay */}
                         <div className="source-thumb-large">
                             <img
                                 src={sourceVideo.thumbnail}
@@ -76,6 +76,15 @@ function AssetCard({ asset, sourceVideo, onVideoClick, onImageClick }) {
                                     e.target.src = 'https://images.placeholders.dev/?width=640&height=360&text=No+Preview&bgColor=%230a0a0a&textColor=%23444';
                                 }}
                             />
+                            {/* Outlier score badge */}
+                            {sourceVideo.multiplier && sourceVideo.multiplier > 0 && (
+                                <div className={`source-multiplier-badge ${sourceVideo.multiplier >= 7 ? 'multiplier-high' :
+                                        sourceVideo.multiplier >= 3 ? 'multiplier-medium' : 'multiplier-low'
+                                    }`}>
+                                    {sourceVideo.multiplier >= 5 ? '🚀 ' : sourceVideo.multiplier >= 2 ? '🔥 ' : ''}
+                                    {parseFloat(sourceVideo.multiplier).toFixed(1)}x
+                                </div>
+                            )}
                             <div className="source-play-overlay">
                                 <div className="source-play-btn">
                                     <PlayCircle size={18} fill="white" color="white" strokeWidth={1.5} />
@@ -90,13 +99,25 @@ function AssetCard({ asset, sourceVideo, onVideoClick, onImageClick }) {
                             ) : (
                                 <div className="source-video-title source-video-title--empty">Untitled Video</div>
                             )}
+                            {/* Creator — always show if not the generic 'Creator' default */}
                             {sourceVideo.creator && sourceVideo.creator !== 'Creator' && (
                                 <div className="source-video-creator">@{String(sourceVideo.creator).replace(/^@/, '')}</div>
+                            )}
+                            {/* Published date — use relative_time if available, fallback to formatted date */}
+                            {(sourceVideo.relative_time || sourceVideo.date_posted) && (
+                                <div className="source-video-date">
+                                    {sourceVideo.relative_time || (() => {
+                                        const d = new Date(sourceVideo.date_posted);
+                                        return isNaN(d.getTime()) ? null :
+                                            d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                                    })()}
+                                </div>
                             )}
                         </div>
                     </div>
                 </div>
             )}
+
 
             {/* GENERATED CONTENT SECTION */}
             <div className="asset-result-section">

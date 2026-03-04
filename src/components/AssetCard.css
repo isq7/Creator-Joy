@@ -149,6 +149,28 @@
     font-weight: 700;
 }
 
+.source-video-date {
+    font-size: 0.65rem;
+    color: rgba(255, 255, 255, 0.35);
+    font-weight: 500;
+}
+
+/* Outlier score badge on source thumbnail */
+.source-multiplier-badge {
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    z-index: 10;
+    font-size: 0.6rem;
+    font-weight: 800;
+    padding: 2px 5px;
+    border-radius: 5px;
+    color: white;
+    line-height: 1;
+    pointer-events: none;
+    white-space: nowrap;
+}
+
 /* Inline embed (shown after click) */
 .source-embed-wrapper {
     width: 100%;

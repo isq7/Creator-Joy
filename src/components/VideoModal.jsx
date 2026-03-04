@@ -80,12 +80,11 @@ function VideoModal({ video, onClose }) {
     return (
         <div className="modal-backdrop" onClick={handleBackdropClick}>
 
-            {/* Single unified close button, always at top-right of backdrop */}
-            <button className="modal-backdrop-close" onClick={onClose} aria-label="Close modal">✕</button>
-
             {isInstagram ? (
                 /* ─── INSTAGRAM CARD ─────────────────────────────────── */
                 <div className="ig-card">
+                    {/* Close button top-right of card */}
+                    <button className="modal-close" onClick={onClose} aria-label="Close modal">✕</button>
                     <div className="ig-frame-wrap">
                         {/* iframe loads immediately */}
                         <iframe
@@ -142,6 +141,7 @@ function VideoModal({ video, onClose }) {
             ) : (
                 /* ─── YOUTUBE / STANDARD LAYOUT ─────────────────────── */
                 <div className="modal-content vertical-video">
+                    <button className="modal-close" onClick={onClose} aria-label="Close modal">✕</button>
                     <div className="video-container">
                         {isPlaying ? (
                             <iframe

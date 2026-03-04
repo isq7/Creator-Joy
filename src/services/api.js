@@ -781,8 +781,13 @@ export async function fetchVideosByIds(videoIds) {
                 title: video.title && video.title !== '(title not found)' ? video.title : '',
                 thumbnail: thumbnail || `https://images.placeholders.dev/?width=640&height=360&text=No%20Image&bgColor=%230a0a0a&textColor=%23ffffff`,
                 views: video.views || 0,
+                median_views: video.median_views || 0,
+                multiplier: parseFloat(video.multiplier) || 1.1,
                 video_url: video.video_url,
                 embed_url: embedUrl,
+                // Same date logic as transformSupabaseResponse
+                date_posted: video.published_at || video.posted_at || null,
+                relative_time: getRelativeTime(video.published_at || video.posted_at),
                 creator: (() => {
                     // Try DB columns first
                     if (video.creator_username) return video.creator_username;
@@ -799,6 +804,7 @@ export async function fetchVideosByIds(videoIds) {
                 })(),
                 platform: video.platform,
             };
+
         });
     } catch (err) {
         console.error('Fetch videos by IDs error:', err);
