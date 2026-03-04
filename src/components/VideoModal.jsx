@@ -82,6 +82,8 @@ function VideoModal({ video, onClose }) {
                             scrolling="no"
                             title={video.title || 'Instagram Reel'}
                         />
+                        {/* Top mask — hides Instagram's embed header + X button */}
+                        <div className="ig-top-mask"></div>
                         <div className="ig-bottom-mask"></div>
 
                         {/* Play button — pointer-events:none lets clicks pass straight to iframe.
@@ -116,19 +118,23 @@ function VideoModal({ video, onClose }) {
                             <div className="ig-meta-col">
                                 <span className="ig-meta-label">PUBLISHED</span>
                                 <span className="ig-meta-value">
-                                    {new Date(video.date_posted).toLocaleDateString('en-US', {
-                                        month: 'short',
-                                        day: 'numeric',
-                                        year: 'numeric'
-                                    })}
+                                    {video.date_posted && !isNaN(new Date(video.date_posted))
+                                        ? new Date(video.date_posted).toLocaleDateString('en-US', {
+                                            month: 'short',
+                                            day: 'numeric',
+                                            year: 'numeric'
+                                        })
+                                        : '—'}
                                 </span>
                             </div>
-                            <div className="ig-meta-col ig-meta-col-creator">
-                                <span className="ig-meta-label">CREATOR</span>
-                                <span className="ig-meta-value creator-handle" title={`@${video.creator}`}>
-                                    @{video.creator}
-                                </span>
-                            </div>
+                            {video.creator && video.creator !== 'Creator' && (
+                                <div className="ig-meta-col ig-meta-col-creator">
+                                    <span className="ig-meta-label">CREATOR</span>
+                                    <span className="ig-meta-value creator-handle" title={`@${video.creator}`}>
+                                        @{video.creator}
+                                    </span>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>

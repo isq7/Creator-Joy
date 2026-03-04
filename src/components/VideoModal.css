@@ -244,6 +244,18 @@
     z-index: 20;
 }
 
+/* Top Mask - covers Instagram's embed header (username row + X button) */
+.ig-top-mask {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 72px;
+    background: #000;
+    pointer-events: none;
+    z-index: 21;
+}
+
 /* ── IG Play Overlay ──────────────────────
    Sits on top of the loaded iframe.
    Full-area click target — centered play button.
