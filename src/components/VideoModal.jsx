@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
-import { Eye } from 'lucide-react';
+import { Eye, Play } from 'lucide-react';
 import './VideoModal.css';
 
 function VideoModal({ video, onClose }) {
+    const [isPlaying, setIsPlaying] = useState(false);
     // Close modal on Escape key
     useEffect(() => {
         const handleEscape = (e) => {
@@ -61,13 +61,31 @@ function VideoModal({ video, onClose }) {
                 <div className="ig-card">
                     <button className="modal-close" onClick={onClose} aria-label="Close modal">✕</button>
                     <div className="ig-frame-wrap">
-                        <iframe
-                            src={video.embed_url}
-                            className="ig-iframe"
-                            allow="autoplay; encrypted-media"
-                            scrolling="no"
-                            title={video.title || 'Instagram Reel'}
-                        />
+                        {isPlaying ? (
+                            <iframe
+                                src={video.embed_url + (video.embed_url.includes('?') ? '&' : '?') + 'autoplay=1'}
+                                className="ig-iframe"
+                                allow="autoplay; encrypted-media"
+                                scrolling="no"
+                                title={video.title || 'Instagram Reel'}
+                            />
+                        ) : (
+                            <div className="video-preview-overlay" onClick={() => setIsPlaying(true)}>
+                                <img
+                                    src={video.thumbnail}
+                                    className="modal-preview-thumb"
+                                    alt={video.title}
+                                    onError={(e) => {
+                                        e.target.src = `https://images.placeholders.dev/?width=640&height=360&text=IG-Thumbnail&bgColor=%230a0a0a&textColor=%23ffffff`;
+                                    }}
+                                />
+                                <div className="proper-play-btn-wrapper">
+                                    <div className="proper-play-btn">
+                                        <Play fill="currentColor" size={32} />
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                         <div className="ig-bottom-mask"></div>
 
                         {/* Top Meta (Multiplier) - Floating over video */}
@@ -115,13 +133,28 @@ function VideoModal({ video, onClose }) {
                 <div className="modal-content vertical-video">
                     <button className="modal-close" onClick={onClose} aria-label="Close modal">✕</button>
                     <div className="video-container">
-                        <iframe
-                            src={video.embed_url}
-                            title={video.title || 'Embedded video'}
-                            frameBorder="0"
-                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                            allowFullScreen
-                        />
+                        {isPlaying ? (
+                            <iframe
+                                src={video.embed_url + (video.embed_url.includes('?') ? '&' : '?') + 'autoplay=1'}
+                                title={video.title || 'Embedded video'}
+                                frameBorder="0"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                allowFullScreen
+                            />
+                        ) : (
+                            <div className="video-preview-overlay" onClick={() => setIsPlaying(true)}>
+                                <img
+                                    src={video.thumbnail}
+                                    className="modal-preview-thumb"
+                                    alt={video.title}
+                                />
+                                <div className="proper-play-btn-wrapper">
+                                    <div className="proper-play-btn">
+                                        <Play fill="currentColor" size={32} />
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </div>
                     <div className="standard-modal-info">
                         <h3>{video.title}</h3>

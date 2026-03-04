@@ -162,6 +162,64 @@
     z-index: -1;
 }
 
+/* Video Preview state */
+.video-preview-overlay {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    cursor: pointer;
+    background: #000;
+    z-index: 25;
+    /* Below close btn but above frame */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.modal-preview-thumb {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0.85;
+    transition: transform 0.6s cubic-bezier(0.2, 1, 0.3, 1), opacity 0.3s ease;
+}
+
+.video-preview-overlay:hover .modal-preview-thumb {
+    transform: scale(1.05);
+    opacity: 0.95;
+}
+
+.proper-play-btn-wrapper {
+    position: absolute;
+    z-index: 30;
+    pointer-events: none;
+}
+
+.proper-play-btn {
+    width: 84px;
+    height: 58px;
+    background: #fff;
+    border-radius: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #000;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.8);
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.video-preview-overlay:hover .proper-play-btn {
+    transform: scale(1.15);
+    box-shadow: 0 15px 50px rgba(0, 0, 0, 1);
+}
+
+.proper-play-btn svg {
+    margin-left: 4px;
+    /* Visually center the triangle */
+}
+
 
 /* Iframe - Aggressive Masking */
 .ig-iframe {
