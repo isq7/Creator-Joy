@@ -18,7 +18,7 @@ function HomeScreen({ onPlatformSelect, platform, outliers, generatedContent = [
     // Scoped state for each view to keep filters and visibility individual
     // Everyone gets the same structure to prevent "undefined" crashes
     const defaultFilters = {
-        outlierScore: { min: 1, max: 500 },
+        outlierScore: { min: 1, max: 250 },
         views: { min: '1k', max: '10M' },
         dateRange: 'all'
     };
@@ -345,11 +345,11 @@ function HomeScreen({ onPlatformSelect, platform, outliers, generatedContent = [
                                     <SliderDropdown
                                         label="Outlier Score"
                                         min={1}
-                                        max={500}
+                                        max={250}
                                         step={1}
                                         value={{
                                             min: activeFilters?.outlierScore?.min || 1,
-                                            max: activeFilters?.outlierScore?.max || 500
+                                            max: activeFilters?.outlierScore?.max || 250
                                         }}
                                         onChange={(val) => handleFilterChange('outlierScore', val)}
                                         unit="x"
